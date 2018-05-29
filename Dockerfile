@@ -14,4 +14,6 @@ WORKDIR /hgi-groups
 ADD . .
 RUN pip install -r requirements.txt
 
-# TODO Start server
+# Start server
+EXPOSE 5000
+CMD python -m groups.main
