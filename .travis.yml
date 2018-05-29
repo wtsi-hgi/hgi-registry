@@ -1,0 +1,18 @@
+language: python
+
+python:
+  - 3.6
+
+before_install:
+  - pip install -U pip setuptools wheel
+  - pip install codecov coverage
+
+install:
+  - pip install -r requirements.txt
+
+script:
+  # TODO
+  - true
+
+after_success:
+  - codecov
