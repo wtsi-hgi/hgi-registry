@@ -8,9 +8,8 @@ groups within the Human Genetics Programme.
 
 # Installation
 
-Pull and run the Docker container:
+Just pull and run the Docker container:
 
-    docker pull mercury/hgi-groups
     docker run -dp 80:5000 \
                -e LDAP_URI=ldap://my.ldap.host:389 \
                -e LDAP_BASE=dc=example,dc=com \
