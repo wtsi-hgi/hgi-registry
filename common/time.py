@@ -17,8 +17,8 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from datetime import datetime
-from groups import types as T
+from datetime import datetime, timedelta
 
-__all__ = ["now"]
-now:T.Callable[[], T.DateTime] = datetime.utcnow
+__all__ = ["now", "delta"]
+now = datetime.utcnow
+delta = timedelta
