@@ -18,11 +18,11 @@ with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
 import asyncio
+import typing as T
 from functools import wraps
-from typing import Callable, Union
 
 
-def async_test(fn_or_loop:Union[Callable, asyncio.BaseEventLoop, None] = None) -> Callable:
+def async_test(fn_or_loop:T.Union[T.Callable, asyncio.BaseEventLoop, None] = None) -> T.Callable:
     """
     Decorator for testing asynchronous code
 
@@ -30,9 +30,9 @@ def async_test(fn_or_loop:Union[Callable, asyncio.BaseEventLoop, None] = None) -
                          OR event loop to use (i.e., parametrised decorator)
     """
     parametrised = isinstance(fn_or_loop, (asyncio.BaseEventLoop, type(None)))
-    loop = parametrised and fn_or_loop or asyncio.get_event_loop()
+    loop = fn_or_loop if parametrised else asyncio.get_event_loop()
 
-    def _decorator(fn:Callable) -> Callable:
+    def _decorator(fn:T.Callable) -> T.Callable:
         @wraps(fn)
         def _decorated(*args, **kwargs):
             coroutine = asyncio.coroutine(fn)
