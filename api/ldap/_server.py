@@ -24,11 +24,30 @@ from common import types as T
 from ._scope import Scope
 
 
-_EntryT = T.Dict[str, T.Union[T.Text, T.ByteString]]
+_EntryT = T.Dict[str, T.List[T.Union[T.Text, T.ByteString]]]
+
+class _SearchResults(T.AsyncIterator[T.Tuple[str, _EntryT]]):
+    """ Asynchronous generator from LDAP search generator """
+    def __init__(self, results) -> None:
+        self._results = results
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self) -> T.Tuple[str, _EntryT]:
+        """ Iterate through generator """
+        try:
+            _, [(dn, entry)], _, _ = next(self._results)
+
+        except StopIteration:
+            raise StopAsyncIteration
+
+        return dn, entry
+
 
 class LDAPServer(LDAPObject, ResultProcessor):
     """ LDAP connection object with asynchronous searching """
-    async def search(self, base:str, scope:Scope, search:str = "(objectClass=*)", attrs:T.Optional[T.List[str]] = None) -> T.AsyncIterator[T.Tuple[str, _EntryT]]:
+    async def search(self, base:str, scope:Scope, search:str = "(objectClass=*)", attrs:T.Optional[T.List[str]] = None) -> _SearchResults:
         """
         Invoke an LDAP search and return results asynchronously
 
@@ -39,7 +58,5 @@ class LDAPServer(LDAPObject, ResultProcessor):
         @return  Asynchronous generator of DN/entry tuples
         """
         msgid = super().search(base, scope.value, search, attrs)
-
-        async for _type, data, _msgid, _controls in self.allresults(msgid):
-            # data is a tuple of DN (string) and payload (dictionary)
-            yield data
+        async for result in _SearchResults(self.allresults(msgid)):
+            yield result
