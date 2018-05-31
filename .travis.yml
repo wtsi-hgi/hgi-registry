@@ -5,14 +5,13 @@ python:
 
 before_install:
   - pip install -U pip setuptools wheel
-  - pip install codecov coverage
+  - pip install nose2 nose2-cov coverage codecov
 
 install:
   - pip install -r requirements.txt
 
 script:
-  # TODO
-  - true
+  - nose2 -F -C --coverage-report=term-missing -v tests
 
 after_success:
   - codecov
