@@ -18,21 +18,33 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
 import unittest
+from unittest.mock import patch
 
 from tests import async_test
-import api.ldap._server as server
+import api.ldap._server as ldap
+
+
+def _mock_results():
+    for _ in range(10):
+        yield "foo", [("dn", "entry")], "bar", "quux"
 
 
 class TestResultGenerator(unittest.TestCase):
-    def setUp(self):
-        def mock_results():
-            for _ in range(10):
-                yield "foo", [("dn", "entry")], "bar", "quux"
-
-        self.mock_results = mock_results()
-
     @async_test
     async def test_generator(self):
-        async for dn, entry in server._SearchResults(self.mock_results):
+        async for dn, entry in ldap._SearchResults(_mock_results()):
             self.assertEqual(dn, "dn")
             self.assertEqual(entry, "entry")
+
+
+class TestLDAPServer(unittest.TestCase):
+    @async_test
+    @patch("api.ldap._server.ResultProcessor", spec=True)
+    @patch("api.ldap._server.LDAPObject", spec=True)
+    async def test_search(self, mock_ldap, mock_results):
+        # FIXME Mocking methods from superclasses
+        ldap.LDAPServer.__bases__ = (mock_ldap.__class__, mock_results.__class__)
+        s = ldap.LDAPServer("ldap://example.com")
+        s.search("dc=example,dc=com", ldap.Scope.Base, "(foo=bar)")
+
+        # TODO Can this even be done?...
