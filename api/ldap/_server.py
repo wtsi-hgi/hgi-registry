@@ -17,11 +17,13 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
+import ldap
 from ldap.ldapobject import LDAPObject
 from ldap.resiter import ResultProcessor
 
 from common import types as T
 from . import _types as ldapT
+from ._exceptions import *
 from ._scope import Scope
 
 
@@ -48,6 +50,12 @@ class _SearchResults(T.AsyncIterator[_ResultT]):
 
 class Server(LDAPObject, ResultProcessor):
     """ LDAP connection object with asynchronous searching """
+    _server_uri:str
+
+    def __init__(self, uri:str) -> None:
+        self._server_uri = uri
+        super().__init__(uri)
+
     async def search(self, base:str, scope:Scope, search:str = "(objectClass=*)", attrs:T.Optional[T.List[str]] = None) -> _SearchResults:
         """
         Invoke an LDAP search and return results asynchronously
@@ -58,6 +66,14 @@ class Server(LDAPObject, ResultProcessor):
         @param   attrs   List of attributes; None for everything (default)
         @return  Asynchronous generator of DN/entry tuples
         """
-        msgid = super().search(base, scope.value, search, attrs)
-        async for result in _SearchResults(self.allresults(msgid)):
-            yield result
+        try:
+            msgid = super().search(base, scope.value, search, attrs)
+
+            async for result in _SearchResults(self.allresults(msgid)):
+                yield result
+
+        except ldap.NO_SUCH_OBJECT:
+            raise NoSuchDistinguishedName(f"Base DN {base} does not exist")
+
+        except ldap.SERVER_DOWN:
+            raise CannotConnect(f"Cannot connect to {self._server_uri}")

@@ -17,6 +17,16 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
+__all__ = [
+    "CannotConnect",
+    "NoServerSpecified",
+    "NoSuchDistinguishedName",
+    "PayloadNotFetched"
+]
+
+class CannotConnect(BaseException):
+    """ Raised when a connection cannot be established """
+
 class NoServerSpecified(BaseException):
     """ Raised when the LDAP server hasn't been injected """
 

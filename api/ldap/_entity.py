@@ -40,6 +40,9 @@ class Entity(ldapT.Payload):
         return self._dn
 
     def _inject_server(self, server:Server) -> None:
+        # NOTE Server dependency injection is delegated to a setter,
+        # rather than a constructor argument, as it's not the entity's
+        # responsibility to re-establish a connection if/when it dies
         self._server = server
 
     server = property(None, _inject_server)
