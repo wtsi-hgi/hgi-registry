@@ -1,2 +1,2 @@
 from ._scope import Scope
-from ._server import LDAPServer
+from ._server import Server

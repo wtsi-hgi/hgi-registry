@@ -45,7 +45,7 @@ class _SearchResults(T.AsyncIterator[T.Tuple[str, _EntryT]]):
         return dn, entry
 
 
-class LDAPServer(LDAPObject, ResultProcessor):
+class Server(LDAPObject, ResultProcessor):
     """ LDAP connection object with asynchronous searching """
     async def search(self, base:str, scope:Scope, search:str = "(objectClass=*)", attrs:T.Optional[T.List[str]] = None) -> _SearchResults:
         """
