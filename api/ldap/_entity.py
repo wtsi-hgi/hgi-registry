@@ -30,10 +30,10 @@ class Entity(ldapT.Payload):
     _dn:str
     _payload:T.Optional[T.Dict[str, ldapT.Data]]
 
-    def __init__(self, dn:str) -> None:
+    def __init__(self, dn:str, payload:T.Optional[T.Dict[str, ldapT.Data]] = None) -> None:
         self._server = None
         self._dn = dn
-        self._payload = None
+        self._payload = payload
 
     @property
     def dn(self) -> str:
@@ -77,3 +77,14 @@ class Entity(ldapT.Payload):
 
         if not exists:
             raise NoSuchDistinguishedName(f"{self._dn} does not exist!")
+
+
+def search_entity_adaptor(result:T.Tuple[str, ldapT.Payload], server:T.Optional[Server] = None) -> Entity:
+    """ Adapt results from Server.search into Entity instances """
+    entity = Entity(*result)
+
+    # Inject server dependency, if provided
+    if server is not None:
+        entity.server = server
+
+    return entity
