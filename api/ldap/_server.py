@@ -21,12 +21,13 @@ from ldap.ldapobject import LDAPObject
 from ldap.resiter import ResultProcessor
 
 from common import types as T
+from . import _types as ldapT
 from ._scope import Scope
 
 
-_EntryT = T.Dict[str, T.List[T.Union[T.Text, T.ByteString]]]
+_ResultT  = T.Tuple[str, ldapT.Payload]  # DN: Payload
 
-class _SearchResults(T.AsyncIterator[T.Tuple[str, _EntryT]]):
+class _SearchResults(T.AsyncIterator[_ResultT]):
     """ Asynchronous generator from LDAP search generator """
     def __init__(self, results) -> None:
         self._results = results
@@ -34,7 +35,7 @@ class _SearchResults(T.AsyncIterator[T.Tuple[str, _EntryT]]):
     def __aiter__(self):
         return self
 
-    async def __anext__(self) -> T.Tuple[str, _EntryT]:
+    async def __anext__(self) -> _ResultT:
         """ Iterate through generator """
         try:
             _, [(dn, entry)], _, _ = next(self._results)
