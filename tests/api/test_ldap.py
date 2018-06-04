@@ -18,25 +18,64 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
 import unittest
+from unittest.mock import patch
 
 from tests import async_test
-import api.ldap._server as ldap
+import api.ldap._entity as e
+import api.ldap._server as s
+import api.ldap._exceptions as x
 
 
-def _mock_results():
+def _mock_results(x):
     """
     This generator yields the same structure as that returned by
     ldap.resiter's results generator. It's not clear from the
     documentation why the data tuple is wrapped up in a list, but it's
     not our place to ask...
     """
-    for _ in range(10):
-        yield "foo", [("dn", "entry")], "bar", "quux"
+    for _ in range(x):
+        yield "foo", [("dn", {"attribute": "value"})], "bar", "quux"
 
 
 class TestResultGenerator(unittest.TestCase):
     @async_test
     async def test_generator(self):
-        async for dn, entry in ldap._SearchResults(_mock_results()):
+        results = 0
+        async for dn, entry in s._SearchResults(_mock_results(10)):
             self.assertEqual(dn, "dn")
-            self.assertEqual(entry, "entry")
+            self.assertEqual(entry, {"attribute": "value"})
+            results = results + 1
+
+        self.assertEqual(results, 10)
+
+
+class TestEntity(unittest.TestCase):
+    def test_mapping(self):
+        entity = e.Entity("foo")
+        entity._payload = test_payload = {"foo": 123, "bar": 456}
+
+        self.assertEqual(entity.dn, "foo")
+        self.assertEqual(len(entity), len(test_payload))
+
+        for k in entity.keys():
+            self.assertEqual(entity[k], test_payload[k])
+
+    def test_not_fetched(self):
+        entity = e.Entity("foo")
+        self.assertRaises(x.PayloadNotFetched, entity.get, "foo")
+        self.assertRaises(x.PayloadNotFetched, iter, entity)
+        self.assertRaises(x.PayloadNotFetched, len, entity)
+
+    @async_test
+    @patch("api.ldap._server.Server", spec = True)
+    async def test_fetch(self, mock_server):
+        entity = e.Entity("foo")
+        entity.server = mock_server
+
+        mock_server.search.return_value = s._SearchResults(_mock_results(1))
+        await entity.fetch()
+        self.assertEqual(entity["attribute"], "value")
+
+        mock_server.search.return_value = s._SearchResults(_mock_results(0))
+        with self.assertRaises(x.NoSuchDistinguishedName):
+            await entity.fetch()
