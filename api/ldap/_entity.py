@@ -30,10 +30,10 @@ class Entity(ldapT.Payload):
     _dn:str
     _payload:T.Optional[T.Dict[str, ldapT.Data]]
 
-    def __init__(self, dn:str, payload:T.Optional[T.Dict[str, ldapT.Data]] = None) -> None:
+    def __init__(self, dn:str) -> None:
         self._server = None
         self._dn = dn
-        self._payload = payload
+        self._payload = None
 
     @property
     def dn(self) -> str:
@@ -46,6 +46,9 @@ class Entity(ldapT.Payload):
         self._server = server
 
     server = property(None, _inject_server)
+
+    def __repr__(self) -> str:
+        return f"<Entity {self.dn}>"
 
     def __getitem__(self, item:str) -> ldapT.Data:
         if self._payload is None:
@@ -79,12 +82,16 @@ class Entity(ldapT.Payload):
             raise NoSuchDistinguishedName(f"{self._dn} does not exist!")
 
 
-def search_entity_adaptor(result:T.Tuple[str, ldapT.Payload], server:T.Optional[Server] = None) -> Entity:
-    """ Adapt results from Server.search into Entity instances """
-    entity = Entity(*result)
+def entity_adaptor_factory(server:Server) -> T.Callable:
+    """ Factory that creates an Entity adaptor for search results """
+    def _adaptor(result:T.Tuple[str, ldapT.Payload]) -> Entity:
+        """ Adapt results from Server.search into Entity instances """
+        dn, payload = result
 
-    # Inject server dependency, if provided
-    if server is not None:
-        entity.server = server
+        entity = Entity(dn)
+        entity._payload = payload
+        entity._server = server
 
-    return entity
+        return entity
+
+    return _adaptor

@@ -27,7 +27,7 @@ from ._exceptions import *
 from ._scope import Scope
 
 
-_ResultT  = T.Tuple[str, ldapT.Payload]  # DN: Payload
+_ResultT = T.Tuple[str, ldapT.Payload]  # DN: Payload
 
 class _SearchResults(T.AsyncIterator[_ResultT]):
     """ Asynchronous generator from LDAP search generator """
@@ -48,6 +48,9 @@ class _SearchResults(T.AsyncIterator[_ResultT]):
         return dn, entry
 
 
+_AdaptedT = T.TypeVar("_AdaptedT")
+_AdaptorT = T.Callable[[_ResultT], _AdaptedT]
+
 class Server(LDAPObject, ResultProcessor):
     """ LDAP connection object with asynchronous searching """
     _server_uri:str
@@ -56,21 +59,26 @@ class Server(LDAPObject, ResultProcessor):
         self._server_uri = uri
         super().__init__(uri)
 
-    async def search(self, base:str, scope:Scope, search:str = "(objectClass=*)", attrs:T.Optional[T.List[str]] = None) -> _SearchResults:
+    async def search(self, base:str, scope:Scope, search:str = "(objectClass=*)", *,
+                     attrs:T.Optional[T.List[str]] = None,
+                     adaptor:T.Optional[_AdaptorT] = None) -> T.AsyncIterator[_AdaptedT]:
         """
         Invoke an LDAP search and return results asynchronously
 
-        @param   base    Search base DN
-        @param   scope   Search scope
-        @param   search  Search term
-        @param   attrs   List of attributes; None for everything (default)
-        @return  Asynchronous generator of DN/entry tuples
+        @param   base     Search base DN
+        @param   scope    Search scope
+        @param   search   Search term
+        @kwarg   attrs    List of attributes; None for everything (default)
+        @kwarg   adaptor  Function applied to each result; None for no adaption (default)
+        @return  Asynchronous generator of (optionally adapted) search results
         """
+        adaptor = adaptor or (lambda x: x)
+
         try:
             msgid = super().search(base, scope.value, search, attrs)
 
             async for result in _SearchResults(self.allresults(msgid)):
-                yield result
+                yield adaptor(result)
 
         except ldap.NO_SUCH_OBJECT:
             raise NoSuchDistinguishedName(f"Base DN {base} does not exist")
