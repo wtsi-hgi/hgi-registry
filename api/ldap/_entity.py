@@ -68,15 +68,16 @@ class Entity(ldapT.Payload):
 
         return len(self._payload)
 
-    async def fetch(self) -> None:
-        """ Fetch LDAP entry payload """
+    async def fetch(self, *attrs:str) -> None:
+        """ Fetch LDAP entry attributes """
         if self._server is None:
             raise NoServerSpecified("No LDAP server specified!")
 
+        to_fetch = list(attrs) if attrs else None
         exists = False
-        async for _, payload in self._server.search(self._dn, Scope.Base):
+        async for _, payload in self._server.search(self._dn, Scope.Base, attrs=to_fetch):
             exists = True
-            self._payload = payload
+            self._payload = {**(self._payload or {}), **payload}
 
         if not exists:
             raise NoSuchDistinguishedName(f"{self._dn} does not exist!")
