@@ -26,7 +26,6 @@ from . import ldap
 class _DataExpired(BaseException):
     """ Raised when an _Expirable has passed its shelf life """
 
-
 class _Expirable(metaclass=ABCMeta):
     """ Base class for items that ought to be periodically updated """
     _last_updated:T.Optional[T.DateTime]
@@ -55,17 +54,20 @@ class _Expirable(metaclass=ABCMeta):
 
 _AttrAdaptorT = T.Callable[[T.List[T.Union[T.Text, T.ByteString]]], T.Any]
 
+_noop    = lambda x: x
 _flatten = lambda x: x[0].decode()  # Adaptor to flatten simple text attributes
 
 class _Attribute(object):
     """ Potentially optional attribute, with an adaptor to munge data """
     _dn:str
     _adaptor:_AttrAdaptorT
-    _default:T.Optional[T.Any]  # None means mandatory attribute
+    _optional:bool
+    _default:T.Any
 
-    def __init__(self, dn:str, adaptor:T.Optional[_AttrAdaptorT] = _flatten, *, default:T.Optional[T.Any] = None) -> None:
+    def __init__(self, dn:str, *, adaptor:_AttrAdaptorT = _flatten, optional:bool = False, default:T.Any = None) -> None:
         self._dn = dn
-        self._adaptor = adaptor or (lambda x: x)
+        self._adaptor = adaptor
+        self._optional = optional
         self._default = default
 
     def __call__(self, entity:ldap.Entity) -> T.Any:
@@ -73,11 +75,10 @@ class _Attribute(object):
             return self._adaptor(entity[self._dn])
 
         except KeyError:
-            if self._default is not None:
+            if self._optional:
                 return self._default
 
             raise
-
 
 class _Node(_Expirable):
     """ Superclass for specific LDAP object classes """
