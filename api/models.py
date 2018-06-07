@@ -23,10 +23,10 @@ from common import types as T, time
 from . import ldap
 
 
-__all__ = ["DataExpired", "Cache", "Person", "Group"]
+__all__ = ["Cache", "Person", "Group"]
 
 
-class DataExpired(BaseException):
+class _DataExpired(BaseException):
     """ Raised when an _Expirable has passed its shelf life """
 
 class _Expirable(metaclass=ABCMeta):
@@ -106,7 +106,7 @@ class _Node(_Expirable):
             raise AttributeError(f"No such attribute {attr}!")
 
         if self.has_expired():
-            raise DataExpired
+            raise _DataExpired
 
         return self._attr_map[attr](self._entity)
 
