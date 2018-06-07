@@ -23,7 +23,10 @@ from common import types as T, time
 from . import ldap
 
 
-class _DataExpired(BaseException):
+__all__ = ["DataExpired", "Cache", "Person", "Group"]
+
+
+class DataExpired(BaseException):
     """ Raised when an _Expirable has passed its shelf life """
 
 class _Expirable(metaclass=ABCMeta):
@@ -82,12 +85,20 @@ class _Attribute(object):
 
 class _Node(_Expirable):
     """ Superclass for specific LDAP object classes """
+    _rdn_attr:T.ClassVar[str]
+    _base_dn:T.ClassVar[str]
+
+    _identity:str
     _entity:ldap.Entity
     _attr_map:T.Dict[str, T.Tuple[str, _AttrAdaptorT]]
 
-    def __init__(self, entity:ldap.Entity, attr_map:T.Dict[str, _Attribute], shelf_life:T.TimeDelta) -> None:
+    def __init__(self, identity:str, server:ldap.Server, attr_map:T.Dict[str, _Attribute], shelf_life:T.TimeDelta) -> None:
         super().__init__(shelf_life)
-        self._entity = entity
+
+        self._identity = identity
+        self._entity = ldap.Entity(self.dn)
+        self._entity.server = server
+
         self._attr_map = attr_map
 
     def __getattr__(self, attr:str) -> str:
@@ -95,29 +106,89 @@ class _Node(_Expirable):
             raise AttributeError(f"No such attribute {attr}!")
 
         if self.has_expired():
-            raise _DataExpired
+            raise DataExpired
 
         return self._attr_map[attr](self._entity)
 
     async def __updator__(self, *_, **__) -> None:
         await self._entity.fetch()
 
+    @classmethod
+    def _dn_builder(cls, identity:str) -> str:
+        return f"{cls._rdn_attr}={identity},{cls._base_dn}"
+
+    @property
+    def dn(self) -> str:
+        return self.__class__._dn_builder(self._identity)
+
+    def reattach_server(self, server:ldap.Server) -> None:
+        """
+        Reattach an LDAP server to the node's entity, in the event of
+        connection problems
+        """
+        self._entity.server = server
+
+
+class Cache(T.Container[_Node]):
+    """ Container for nodes """
+    _server:ldap.Server
+    _shelf_life:T.TimeDelta
+    _cache:T.Dict[str, _Node]
+
+    def __init__(self, server:ldap.Server, shelf_life:T.TimeDelta) -> None:
+        self._server = server
+        self._shelf_life = shelf_life
+        self._cache = {}
+
+    def __contains__(self, identity:str) -> bool:
+        return identity in self._cache
+
+    @property
+    def server(self) -> ldap.Server:
+        return self._server
+
+    @server.setter
+    def server(self, server:ldap.Server) -> None:
+        """
+        Reattach an LDAP server to every node, in the event of
+        connection problems
+        """
+        self._server = server
+        for node in self._cache:
+            self._cache[node].reattach_server(server)
+
+    @property
+    def shelf_life(self) -> T.TimeDelta:
+        return self._shelf_life
+
+    def add(self, cls:T.Type[_Node], identity:str) -> None:
+        """ Add a node to the cache of the specified type """
+        # TODO / NOTE Add from search results?...
+
+    def get(self, cls:T.Type[_Node], identity:str) -> _Node:
+        """ Get a node from the cache of the specified type """
+        # TODO
+
 
 class Person(_Node):
-    def __init__(self, entity:ldap.Entity, shelf_life:T.TimeDelta) -> None:
+    _rdn_attr = "uid"
+    _base_dn = "ou=people,dc=sanger,dc=ac,dc=uk"
+
+    def __init__(self, uid:str, cache:Cache) -> None:
+        # def _resolve(dn) -> Person:
+        #     # TODO Extract RDN from DN
+        #     rdn = _something(dn)
+        #     return cache.get(Person, rdn)
+
         attr_map = {
             "name":    _Attribute("cn"),
             "mail":    _Attribute("mail"),
-            "title":   _Attribute("title", default="?"),
-            "manager": _Attribute("manager", default="?")
+            "title":   _Attribute("title", optional=True, default="Unknown")
+            # "manager": _Attribute("manager", adaptor=_resolve, optional=True)
         }
 
-        super().__init__(entity, attr_map, shelf_life)
+        super().__init__(uid, cache.server, attr_map, cache.shelf_life)
 
 
 class Group(_Node):
-    pass
-
-
-class _Tree(T.Container["_Node"]):
     pass
