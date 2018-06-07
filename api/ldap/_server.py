@@ -22,6 +22,7 @@ from ldap.ldapobject import LDAPObject
 from ldap.resiter import ResultProcessor
 
 from common import types as T
+from common.utils import noop
 from . import _types as ldapT
 from ._exceptions import *
 from ._scope import Scope
@@ -72,7 +73,7 @@ class Server(LDAPObject, ResultProcessor):
         @kwarg   adaptor  Function applied to each result; None for no adaption (default)
         @return  Asynchronous generator of (optionally adapted) search results
         """
-        adaptor = adaptor or (lambda x: x)
+        adaptor = adaptor or noop
 
         try:
             msgid = super().search(base, scope.value, search, attrs)

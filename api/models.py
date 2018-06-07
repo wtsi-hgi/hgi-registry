@@ -56,7 +56,6 @@ class _Expirable(metaclass=ABCMeta):
 
 _AttrAdaptorT = T.Callable[[T.List[T.Union[T.Text, T.ByteString]]], T.Any]
 
-_noop    = lambda x: x
 _flatten = lambda x: x[0].decode()  # Adaptor to flatten simple text attributes
 
 class _Attribute(object):
