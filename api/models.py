@@ -18,6 +18,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from abc import ABCMeta, abstractmethod
+import re
 
 from common import types as T, time
 from . import ldap
@@ -112,6 +113,15 @@ class _Node(_Expirable):
 
     async def __updator__(self, *_, **__) -> None:
         await self._entity.fetch()
+
+    @classmethod
+    def extract_rdn(cls, dn:str) -> str:
+        """ Extract the RDN from the DN """
+        search = re.search(fr"(?<=^{cls._rdn_attr}=).*(?=,{cls._base_dn}$)", dn)
+        if not search:
+            raise ldap.NoSuchDistinguishedName(f"Cannot extract {cls.__name__} RDN from {dn}")
+
+        return search[0]
 
     @classmethod
     def _dn_builder(cls, identity:str) -> str:
