@@ -181,6 +181,7 @@ class Cache(T.Container[_Node]):
 
 
 class Person(_Node):
+    """ High level LDAP person model """
     _rdn_attr = "uid"
     _base_dn = "ou=people,dc=sanger,dc=ac,dc=uk"
 
@@ -201,4 +202,13 @@ class Person(_Node):
 
 
 class Group(_Node):
-    pass
+    """ High level LDAP group model """
+    _rdn_attr = "cn"
+    _base_dn = "ou=group,dc=sanger,dc=ac,dc=uk"
+
+    def __init__(self, cn:str, cache:Cache) -> None:
+        attr_map = {
+            # TODO
+        }
+
+        super().__init__(cn, cache.server, attr_map, cache.shelf_life)
