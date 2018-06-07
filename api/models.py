@@ -27,9 +27,6 @@ from . import ldap
 __all__ = ["Cache", "Person", "Group"]
 
 
-class _DataExpired(BaseException):
-    """ Raised when an _Expirable has passed its shelf life """
-
 class _Expirable(metaclass=ABCMeta):
     """ Base class for items that ought to be periodically updated """
     _last_updated:T.Optional[T.DateTime]
@@ -43,6 +40,7 @@ class _Expirable(metaclass=ABCMeta):
     async def __updator__(self, *args, **kwargs) -> None:
         """ Update the object's state """
 
+    @property
     def has_expired(self) -> bool:
         """ Has our entity expired? """
         if self._last_updated is None:
@@ -106,9 +104,6 @@ class _Node(_Expirable):
         if attr not in self._attr_map:
             raise AttributeError(f"No such attribute {attr}!")
 
-        if self.has_expired():
-            raise _DataExpired
-
         return self._attr_map[attr](self._entity)
 
     async def __updator__(self, *_, **__) -> None:
@@ -124,12 +119,12 @@ class _Node(_Expirable):
         return search[0]
 
     @classmethod
-    def _dn_builder(cls, identity:str) -> str:
+    def build_dn(cls, identity:str) -> str:
         return f"{cls._rdn_attr}={identity},{cls._base_dn}"
 
     @property
     def dn(self) -> str:
-        return self.__class__._dn_builder(self._identity)
+        return self.__class__.build_dn(self._identity)
 
     def reattach_server(self, server:ldap.Server) -> None:
         """
@@ -150,8 +145,8 @@ class Cache(T.Container[_Node]):
         self._shelf_life = shelf_life
         self._cache = {}
 
-    def __contains__(self, identity:str) -> bool:
-        return identity in self._cache
+    def __contains__(self, dn:str) -> bool:
+        return dn in self._cache
 
     @property
     def server(self) -> ldap.Server:
@@ -171,13 +166,28 @@ class Cache(T.Container[_Node]):
     def shelf_life(self) -> T.TimeDelta:
         return self._shelf_life
 
-    def add(self, cls:T.Type[_Node], identity:str) -> None:
-        """ Add a node to the cache of the specified type """
-        # TODO / NOTE Add from search results?...
-
-    def get(self, cls:T.Type[_Node], identity:str) -> _Node:
-        """ Get a node from the cache of the specified type """
+    async def seed(self, cls:T.Type[_Node], search:str) -> None:
+        """
+        Seed the cache with nodes of the specified type as returned by
+        the given search term
+        """
         # TODO
+
+    async def get(self, cls:T.Type[_Node], identity:str) -> _Node:
+        """
+        Get a node from the cache of the specified type, seeding the
+        cache if the node doesn't exist, and updating it if necessary
+        """
+        dn = cls.build_dn(identity)
+        if dn not in self._cache:
+            search = f"({cls._rdn_attr}={identity})"
+            await self.seed(cls, search)
+
+        node = self._cache[dn]
+        if node.has_expired:
+            await node.update()
+
+        return node
 
 
 class Person(_Node):
