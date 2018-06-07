@@ -170,7 +170,16 @@ class Cache(T.Container[_Node]):
         Seed the cache with nodes of the specified type as returned by
         the given search term
         """
-        # TODO
+        def _adaptor(result) -> T.Tuple[str, _Node]:
+            dn, payload = result
+            identity = cls.extract_rdn(dn)
+            node = cls(identity, self)
+            node._entity._payload = payload
+            node._last_updated = time.now()
+            return dn, node
+
+        async for dn, node in self._server.search(cls._base_dn, ldap.Scope.OneLevel, search, adaptor=_adaptor):
+            self._cache[dn] = node
 
     async def get(self, cls:T.Type[_Node], identity:str) -> _Node:
         """
@@ -187,6 +196,16 @@ class Cache(T.Container[_Node]):
             await node.update()
 
         return node
+
+    def keys(self, cls:T.Type[_Node]) -> T.Iterator[str]:
+        """ Generator of all nodes matching the specified type """
+        for k in self._cache:
+            try:
+                identity = cls.extract_rdn(k)
+                yield identity
+
+            except ldap.NoSuchDistinguishedName:
+                pass
 
 
 class Person(_Node):
