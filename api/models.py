@@ -66,6 +66,7 @@ def _to_bool(x) -> bool:
 
 class _Attribute(object):
     """ Potentially optional attribute, with an adaptor to munge data """
+    # TODO Allow multiple input attributes for mapping
     _dn:str
     _adaptor:_AttrAdaptorT
     _optional:bool
@@ -232,6 +233,7 @@ class Person(_Node):
             "mail":  _Attribute("mail"),
             "title": _Attribute("title", optional=True),
             "photo": _Attribute("jpegPhoto", adaptor=Person.decode_photo, optional=True)
+            # Real person? Active account?...
         }
 
         super().__init__(uid, registry.server, attr_map, registry.shelf_life)
@@ -242,10 +244,32 @@ class Group(_Node):
     _rdn_attr = "cn"
     _base_dn = "ou=group,dc=sanger,dc=ac,dc=uk"
 
+    _registry:Registry
+
+    def _resolve_dn(self, dn:str) -> Person:
+        # FIXME This should return a coroutine that fetches the person
+        rdn = Person.extract_rdn(dn)
+        return Person(rdn, self._registry)
+
+    def resolve_person(self, payload) -> Person:
+        return self._resolve_dn(_flatten(payload))
+
+    def resolve_people(self, payload) -> T.Iterator[Person]:
+        return map(self._resolve_dn, payload)
+
     def __init__(self, cn:str, registry:Registry) -> None:
         attr_map = {
-            "name":   _Attribute("cn"),
-            "active": _Attribute("sangerHumgenProjectActive", adaptor=_to_bool)
+            "name":        _Attribute("cn"),
+            "active":      _Attribute("sangerHumgenProjectActive", adaptor=_to_bool),
+            "pi":          _Attribute("sangerProjectPI", adaptor=self.resolve_person),
+            "owners":      _Attribute("owner", adaptor=self.resolve_people),
+            "members":     _Attribute("member", adaptor=self.resolve_people),
+            "description": _Attribute("description", optional=True),
+            "prelims":     _Attribute("sangerPrelimID", optional=True, default=[])
+            # sangerHumgenDataSecurityLevel
+            # sangerHumgenProjectStorageResources
+            # sangerHumgenProjectStorageQuotas
         }
 
+        self._registry = registry
         super().__init__(cn, registry.server, attr_map, registry.shelf_life)
