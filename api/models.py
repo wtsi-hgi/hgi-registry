@@ -25,7 +25,7 @@ from common import types as T, time
 from . import ldap
 
 
-__all__ = ["Cache", "Person", "Group"]
+__all__ = ["Registry", "Person", "Group"]
 
 
 class _Expirable(metaclass=ABCMeta):
@@ -139,19 +139,19 @@ class _Node(_Expirable):
         self._entity.server = server
 
 
-class Cache(T.Container[_Node]):
+class Registry(T.Container[_Node]):
     """ Container for nodes """
     _server:ldap.Server
     _shelf_life:T.TimeDelta
-    _cache:T.Dict[str, _Node]
+    _registry:T.Dict[str, _Node]
 
     def __init__(self, server:ldap.Server, shelf_life:T.TimeDelta) -> None:
         self._server = server
         self._shelf_life = shelf_life
-        self._cache = {}
+        self._registry = {}
 
     def __contains__(self, dn:str) -> bool:
-        return dn in self._cache
+        return dn in self._registry
 
     @property
     def server(self) -> ldap.Server:
@@ -164,8 +164,8 @@ class Cache(T.Container[_Node]):
         connection problems
         """
         self._server = server
-        for node in self._cache:
-            self._cache[node].reattach_server(server)
+        for node in self._registry:
+            self._registry[node].reattach_server(server)
 
     @property
     def shelf_life(self) -> T.TimeDelta:
@@ -173,8 +173,8 @@ class Cache(T.Container[_Node]):
 
     async def seed(self, cls:T.Type[_Node], search:str) -> None:
         """
-        Seed the cache with nodes of the specified type as returned by
-        the given search term
+        Seed the registry with nodes of the specified type as returned
+        by the given search term
         """
         def _adaptor(result) -> T.Tuple[str, _Node]:
             dn, payload = result
@@ -185,19 +185,19 @@ class Cache(T.Container[_Node]):
             return dn, node
 
         async for dn, node in self._server.search(cls._base_dn, ldap.Scope.OneLevel, search, adaptor=_adaptor):
-            self._cache[dn] = node
+            self._registry[dn] = node
 
     async def get(self, cls:T.Type[_Node], identity:str) -> _Node:
         """
-        Get a node from the cache of the specified type, seeding the
-        cache if the node doesn't exist, and updating it if necessary
+        Get a node from the registry of the specified type, seeding the
+        registry if the node doesn't exist, and updating it if necessary
         """
         dn = cls.build_dn(identity)
-        if dn not in self._cache:
+        if dn not in self._registry:
             search = f"({cls._rdn_attr}={identity})"
             await self.seed(cls, search)
 
-        node = self._cache[dn]
+        node = self._registry[dn]
         if node.has_expired:
             await node.update()
 
@@ -205,7 +205,7 @@ class Cache(T.Container[_Node]):
 
     def keys(self, cls:T.Type[_Node]) -> T.Iterator[str]:
         """ Generator of all nodes matching the specified type """
-        for k in self._cache:
+        for k in self._registry:
             try:
                 identity = cls.extract_rdn(k)
                 yield identity
@@ -226,7 +226,7 @@ class Person(_Node):
         jpeg, *_ = map(base64.b64decode, payload)
         return jpeg
 
-    def __init__(self, uid:str, cache:Cache) -> None:
+    def __init__(self, uid:str, registry:Registry) -> None:
         attr_map = {
             "name":  _Attribute("cn"),
             "mail":  _Attribute("mail"),
@@ -234,7 +234,7 @@ class Person(_Node):
             "photo": _Attribute("jpegPhoto", adaptor=Person.decode_photo, optional=True)
         }
 
-        super().__init__(uid, cache.server, attr_map, cache.shelf_life)
+        super().__init__(uid, registry.server, attr_map, registry.shelf_life)
 
 
 class Group(_Node):
@@ -242,10 +242,10 @@ class Group(_Node):
     _rdn_attr = "cn"
     _base_dn = "ou=group,dc=sanger,dc=ac,dc=uk"
 
-    def __init__(self, cn:str, cache:Cache) -> None:
+    def __init__(self, cn:str, registry:Registry) -> None:
         attr_map = {
             "name":   _Attribute("cn"),
             "active": _Attribute("sangerHumgenProjectActive", adaptor=_to_bool)
         }
 
-        super().__init__(cn, cache.server, attr_map, cache.shelf_life)
+        super().__init__(cn, registry.server, attr_map, registry.shelf_life)
