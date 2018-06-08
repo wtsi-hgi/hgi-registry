@@ -18,6 +18,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from abc import ABCMeta, abstractmethod
+import base64
 import re
 
 from common import types as T, time
@@ -57,6 +58,11 @@ class _Expirable(metaclass=ABCMeta):
 _AttrAdaptorT = T.Callable[[T.List[T.Union[T.Text, T.ByteString]]], T.Any]
 
 _flatten = lambda x: x[0].decode()  # Adaptor to flatten simple text attributes
+
+def _to_bool(x) -> bool:
+    """ Adaptor to convert common strings to Booleans """
+    value = _flatten(x).upper()
+    return value in ["TRUE", "YES"]
 
 class _Attribute(object):
     """ Potentially optional attribute, with an adaptor to munge data """
@@ -213,17 +219,19 @@ class Person(_Node):
     _rdn_attr = "uid"
     _base_dn = "ou=people,dc=sanger,dc=ac,dc=uk"
 
-    def __init__(self, uid:str, cache:Cache) -> None:
-        # def _resolve(dn) -> Person:
-        #     # TODO Extract RDN from DN
-        #     rdn = _something(dn)
-        #     return cache.get(Person, rdn)
+    @staticmethod
+    def decode_photo(payload) -> bytes:
+        """ Adaptor that returns the decoded JPEG data """
+        # FIXME Return an async generator instead? Is that overkill?
+        jpeg, *_ = map(base64.b64decode, payload)
+        return jpeg
 
+    def __init__(self, uid:str, cache:Cache) -> None:
         attr_map = {
-            "name":    _Attribute("cn"),
-            "mail":    _Attribute("mail"),
-            "title":   _Attribute("title", optional=True, default="Unknown")
-            # "manager": _Attribute("manager", adaptor=_resolve, optional=True)
+            "name":  _Attribute("cn"),
+            "mail":  _Attribute("mail"),
+            "title": _Attribute("title", optional=True),
+            "photo": _Attribute("jpegPhoto", adaptor=Person.decode_photo, optional=True)
         }
 
         super().__init__(uid, cache.server, attr_map, cache.shelf_life)
@@ -236,7 +244,8 @@ class Group(_Node):
 
     def __init__(self, cn:str, cache:Cache) -> None:
         attr_map = {
-            # TODO
+            "name":   _Attribute("cn"),
+            "active": _Attribute("sangerHumgenProjectActive", adaptor=_to_bool)
         }
 
         super().__init__(cn, cache.server, attr_map, cache.shelf_life)
