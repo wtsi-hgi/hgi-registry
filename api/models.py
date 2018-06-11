@@ -55,7 +55,7 @@ class _Expirable(metaclass=ABCMeta):
         await self.__updator__(*args, **kwargs)
 
 
-_AttrAdaptorT = T.Callable[[T.List[T.Union[T.Text, T.ByteString]]], T.Any]
+_AttrAdaptorT = T.Callable
 
 _flatten = lambda x: x[0].decode()  # Adaptor to flatten simple text attributes
 
@@ -66,21 +66,22 @@ def _to_bool(x) -> bool:
 
 class _Attribute(object):
     """ Potentially optional attribute, with an adaptor to munge data """
-    # TODO Allow multiple input attributes for mapping
-    _dn:str
+    _attrs:T.Tuple[str, ...]
     _adaptor:_AttrAdaptorT
     _optional:bool
     _default:T.Any
 
-    def __init__(self, dn:str, *, adaptor:_AttrAdaptorT = _flatten, optional:bool = False, default:T.Any = None) -> None:
-        self._dn = dn
+    def __init__(self, *attrs:str, adaptor:_AttrAdaptorT = _flatten, optional:bool = False, default:T.Any = None) -> None:
+        assert attrs # Need at least one
+
+        self._attrs = attrs
         self._adaptor = adaptor
         self._optional = optional
         self._default = default
 
     def __call__(self, entity:ldap.Entity) -> T.Any:
         try:
-            return self._adaptor(entity[self._dn])
+            return self._adaptor(*map(entity.get, self._attrs))
 
         except KeyError:
             if self._optional:
@@ -118,7 +119,7 @@ class _Node(_Expirable):
     @classmethod
     def extract_rdn(cls, dn:str) -> str:
         """ Extract the RDN from the DN """
-        search = re.search(fr"(?<=^{cls._rdn_attr}=).*(?=,{cls._base_dn}$)", dn)
+        search = re.search(fr"(?<=^{cls._rdn_attr}=).+(?=,{cls._base_dn}$)", dn)
         if not search:
             raise ldap.NoSuchDistinguishedName(f"Cannot extract {cls.__name__} RDN from {dn}")
 
