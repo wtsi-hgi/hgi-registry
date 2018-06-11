@@ -212,22 +212,33 @@ class Person(_Node):
     _base_dn = "ou=people,dc=sanger,dc=ac,dc=uk"
 
     @staticmethod
-    def decode_photo(payload) -> T.Optional[bytes]:
+    def decode_photo(jpegPhoto) -> T.Optional[bytes]:
         """ Adaptor that returns the decoded JPEG data, if it exists """
-        if payload is None:
+        if jpegPhoto is None:
             return None
 
         # TODO? Return an async generator instead? Is that overkill?
-        jpeg, *_ = map(base64.b64decode, payload)
+        jpeg, *_ = map(base64.b64decode, jpegPhoto)
         return jpeg
+
+    @staticmethod
+    def is_real(sangerAgressoCurrentPerson) -> bool:
+        """ Adaptor to determine the humanity of a given entry  """
+        return sangerAgressoCurrentPerson is not None
+
+    @staticmethod
+    def is_active(sangerAgressoCurrentPerson, sangerActiveAccount) -> bool:
+        """ Adaptor to determine the active status of a given entry """
+        return _to_bool(sangerAgressoCurrentPerson or sangerActiveAccount)
 
     def __init__(self, uid:str, registry:Registry) -> None:
         attr_map = {
-            "name":  _Attribute("cn", adaptor=_flatten),
-            "mail":  _Attribute("mail", adaptor=_flatten),
-            "title": _Attribute("title", adaptor=_maybe_flatten),
-            "photo": _Attribute("jpegPhoto", adaptor=Person.decode_photo)
-            # Real person? Active account?...
+            "name":   _Attribute("cn", adaptor=_flatten),
+            "mail":   _Attribute("mail", adaptor=_flatten),
+            "title":  _Attribute("title", adaptor=_maybe_flatten),
+            "photo":  _Attribute("jpegPhoto", adaptor=Person.decode_photo),
+            "real":   _Attribute("sangerAgressoCurrentPerson", adaptor=Person.is_real),
+            "active": _Attribute("sangerAgressoCurrentPerson", "sangerActiveAccount", adaptor=Person.is_active)
         }
 
         super().__init__(uid, registry.server, attr_map, registry.shelf_life)
