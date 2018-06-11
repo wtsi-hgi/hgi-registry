@@ -22,6 +22,7 @@ import base64
 import re
 
 from common import types as T, time
+from common.utils import noop
 from . import ldap
 
 
@@ -57,38 +58,24 @@ class _Expirable(metaclass=ABCMeta):
 
 _AttrAdaptorT = T.Callable
 
-_flatten = lambda x: x[0].decode()  # Adaptor to flatten simple text attributes
-
-def _to_bool(x) -> bool:
-    """ Adaptor to convert common strings to Booleans """
-    value = _flatten(x).upper()
-    return value in ["TRUE", "YES"]
+# Basic adaptors to flatten/convert simple text attributes
+_flatten = lambda x: x[0].decode()
+_maybe_flatten = lambda x: _flatten(x) if x else None
+_to_bool = lambda x: _flatten(x).upper() in ["TRUE", "YES"]
 
 class _Attribute(object):
     """ Potentially optional attribute, with an adaptor to munge data """
     _attrs:T.Tuple[str, ...]
     _adaptor:_AttrAdaptorT
-    _optional:bool
-    _default:T.Any
 
-    def __init__(self, *attrs:str, adaptor:_AttrAdaptorT = _flatten, optional:bool = False, default:T.Any = None) -> None:
+    def __init__(self, *attrs:str, adaptor:T.Optional[_AttrAdaptorT] = None) -> None:
         assert attrs # Need at least one
 
         self._attrs = attrs
-        self._adaptor = adaptor
-        self._optional = optional
-        self._default = default
+        self._adaptor = adaptor or noop
 
     def __call__(self, entity:ldap.Entity) -> T.Any:
-        try:
-            return self._adaptor(*map(entity.get, self._attrs))
-
-        # FIXME This won't get raised when using entity.get
-        except KeyError:
-            if self._optional:
-                return self._default
-
-            raise
+        return self._adaptor(*map(entity.get, self._attrs))
 
 class _Node(_Expirable):
     """ Superclass for specific LDAP object classes """
@@ -225,18 +212,21 @@ class Person(_Node):
     _base_dn = "ou=people,dc=sanger,dc=ac,dc=uk"
 
     @staticmethod
-    def decode_photo(payload) -> bytes:
-        """ Adaptor that returns the decoded JPEG data """
-        # FIXME Return an async generator instead? Is that overkill?
+    def decode_photo(payload) -> T.Optional[bytes]:
+        """ Adaptor that returns the decoded JPEG data, if it exists """
+        if payload is None:
+            return None
+
+        # TODO? Return an async generator instead? Is that overkill?
         jpeg, *_ = map(base64.b64decode, payload)
         return jpeg
 
     def __init__(self, uid:str, registry:Registry) -> None:
         attr_map = {
-            "name":  _Attribute("cn"),
-            "mail":  _Attribute("mail"),
-            "title": _Attribute("title", optional=True),
-            "photo": _Attribute("jpegPhoto", adaptor=Person.decode_photo, optional=True)
+            "name":  _Attribute("cn", adaptor=_flatten),
+            "mail":  _Attribute("mail", adaptor=_flatten),
+            "title": _Attribute("title", adaptor=_maybe_flatten),
+            "photo": _Attribute("jpegPhoto", adaptor=Person.decode_photo)
             # Real person? Active account?...
         }
 
@@ -263,13 +253,13 @@ class Group(_Node):
 
     def __init__(self, cn:str, registry:Registry) -> None:
         attr_map = {
-            "name":        _Attribute("cn"),
+            "name":        _Attribute("cn", adaptor=_flatten),
             "active":      _Attribute("sangerHumgenProjectActive", adaptor=_to_bool),
             "pi":          _Attribute("sangerProjectPI", adaptor=self.resolve_person),
             "owners":      _Attribute("owner", adaptor=self.resolve_people),
             "members":     _Attribute("member", adaptor=self.resolve_people),
-            "description": _Attribute("description", optional=True),
-            "prelims":     _Attribute("sangerPrelimID", optional=True, default=[])
+            "description": _Attribute("description", adaptor=_maybe_flatten),
+            "prelims":     _Attribute("sangerPrelimID", adaptor=noop)
             # sangerHumgenDataSecurityLevel
             # sangerHumgenProjectStorageResources
             # sangerHumgenProjectStorageQuotas
