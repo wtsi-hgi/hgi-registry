@@ -178,6 +178,7 @@ class Registry(T.Container[_Node]):
         by the given search term
         """
         def _adaptor(result) -> T.Tuple[str, _Node]:
+            # FIXME Injection attack site
             dn, payload = result
             identity = cls.extract_rdn(dn)
             node = cls(identity, self)
@@ -195,6 +196,7 @@ class Registry(T.Container[_Node]):
         """
         dn = cls.build_dn(identity)
         if dn not in self._registry:
+            # FIXME Injection attack site
             search = f"({cls._rdn_attr}={identity})"
             await self.seed(cls, search)
 
