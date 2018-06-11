@@ -175,10 +175,11 @@ class Registry(T.Container[_Node]):
     async def seed(self, cls:T.Type[_Node], search:str) -> None:
         """
         Seed the registry with nodes of the specified type as returned
-        by the given search term
+        by the given search term. Note that the search term is assumed
+        to be hygienic; it's the caller's responsibility to ensure
+        inputs are escaped to avoid injection attacks.
         """
         def _adaptor(result) -> T.Tuple[str, _Node]:
-            # FIXME Injection attack site
             dn, payload = result
             identity = cls.extract_rdn(dn)
             node = cls(identity, self)
@@ -196,8 +197,7 @@ class Registry(T.Container[_Node]):
         """
         dn = cls.build_dn(identity)
         if dn not in self._registry:
-            # FIXME Injection attack site
-            search = f"({cls._rdn_attr}={identity})"
+            search = f"({cls._rdn_attr}={ldap.escape(identity)})"
             await self.seed(cls, search)
 
         node = self._registry[dn]

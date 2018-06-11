@@ -18,6 +18,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
 import ldap
+from ldap.filter import escape_filter_chars
 from ldap.ldapobject import LDAPObject
 from ldap.resiter import ResultProcessor
 
@@ -86,3 +87,6 @@ class Server(LDAPObject, ResultProcessor):
 
         except ldap.SERVER_DOWN:
             raise CannotConnect(f"Cannot connect to {self._server_uri}")
+
+
+escape = escape_filter_chars
