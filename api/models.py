@@ -83,6 +83,7 @@ class _Attribute(object):
         try:
             return self._adaptor(*map(entity.get, self._attrs))
 
+        # FIXME This won't get raised when using entity.get
         except KeyError:
             if self._optional:
                 return self._default
