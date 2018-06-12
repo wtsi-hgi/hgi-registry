@@ -51,6 +51,10 @@ class _Expirable(metaclass=ABCMeta):
         age = time.now() - self._last_updated
         return age > self._shelf_life
 
+    @property
+    def last_updated(self) -> T.Optional[T.DateTime]:
+        return self._last_updated
+
     async def update(self, *args, **kwargs) -> None:
         self._last_updated = time.now()
         await self.__updator__(*args, **kwargs)

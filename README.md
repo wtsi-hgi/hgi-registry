@@ -29,3 +29,43 @@ from three environment variables:
 * `EXPIRY` The duration (in seconds) before in-memory LDAP entities are
   refreshed from the LDAP server. This value is optional and defaults to
   3600 (i.e., one hour).
+
+# RESTful API
+
+The data returned from the API is rendered from an internal cache, which
+is first populated when a requested entry does not exist. Therefore, the
+data returned may be stale and not reflect the true state at any given
+time. However, cache entries will be refreshed periodically to minimise
+this effect.
+
+The API server exposes the following endpoints:
+
+## `/groups`
+
+Method | Content Type       | Behaviour
+:----- | :----------------- | :-----------------------------------------
+`GET`  | `application/json` | Return the identities of every project and team group in the Human Genetics Programme.
+
+## `/groups/<GROUP>`
+
+Method | Content Type       | Behaviour
+:----- | :----------------- | :-----------------------------------------
+`GET`  | `application/json` | Return the details of the specific group given by `<GROUP>`.
+
+## `/people`
+
+Method | Content Type       | Behaviour
+:----- | :----------------- | :-----------------------------------------
+`GET`  | `application/json` | Return the identities of every user account.
+
+## `/people/<USER_ID>`
+
+Method | Content Type       | Behaviour
+:----- | :----------------- | :-----------------------------------------
+`GET`  | `application/json` | Return the details of the specific user given by `<USER_ID>`.
+
+## `/people/<USER_ID>/photo`
+
+Method | Content Type       | Behaviour
+:----- | :----------------- | :-----------------------------------------
+`GET`  | `image/jpeg`       | Return the photo of the specific user given by `<USER_ID>` if it exists. If said user has no photo, then a 404 Not Found error will be returned.
