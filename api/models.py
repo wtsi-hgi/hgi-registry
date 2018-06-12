@@ -222,7 +222,7 @@ class Person(_Node):
         return jpeg
 
     @staticmethod
-    def is_real(sangerAgressoCurrentPerson) -> bool:
+    def is_human(sangerAgressoCurrentPerson) -> bool:
         """ Adaptor to determine the humanity of a given entry  """
         return sangerAgressoCurrentPerson is not None
 
@@ -233,11 +233,12 @@ class Person(_Node):
 
     def __init__(self, uid:str, registry:Registry) -> None:
         attr_map = {
+            "id":     _Attribute("uid", adaptor=_flatten),
             "name":   _Attribute("cn", adaptor=_flatten),
             "mail":   _Attribute("mail", adaptor=_flatten),
             "title":  _Attribute("title", adaptor=_maybe_flatten),
             "photo":  _Attribute("jpegPhoto", adaptor=Person.decode_photo),
-            "real":   _Attribute("sangerAgressoCurrentPerson", adaptor=Person.is_real),
+            "human":  _Attribute("sangerAgressoCurrentPerson", adaptor=Person.is_human),
             "active": _Attribute("sangerAgressoCurrentPerson", "sangerActiveAccount", adaptor=Person.is_active)
         }
 
@@ -262,6 +263,11 @@ class Group(_Node):
     def resolve_people(self, payload) -> T.Iterator[Person]:
         return map(self._resolve_dn, payload)
 
+    @staticmethod
+    def decode_prelims(sangerPrelimID) -> T.List[str]:
+        """ Adaptor to decode the list of Prelim IDs """
+        return [prelim.decode() for prelim in sangerPrelimID or []]
+
     def __init__(self, cn:str, registry:Registry) -> None:
         attr_map = {
             "name":        _Attribute("cn", adaptor=_flatten),
@@ -270,7 +276,7 @@ class Group(_Node):
             "owners":      _Attribute("owner", adaptor=self.resolve_people),
             "members":     _Attribute("member", adaptor=self.resolve_people),
             "description": _Attribute("description", adaptor=_maybe_flatten),
-            "prelims":     _Attribute("sangerPrelimID", adaptor=noop)
+            "prelims":     _Attribute("sangerPrelimID", adaptor=Group.decode_prelims)
             # sangerHumgenDataSecurityLevel
             # sangerHumgenProjectStorageResources
             # sangerHumgenProjectStorageQuotas
