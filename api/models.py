@@ -264,16 +264,26 @@ class Group(_Node):
 
     _registry:Registry
 
-    def _resolve_dn(self, dn:str) -> Person:
-        # FIXME This should return a coroutine that fetches the person
-        rdn = Person.extract_rdn(dn)
-        return Person(rdn, self._registry)
+    def get_people(self, dns) -> T.Coroutine:
+        """ Adaptor to resolve a list of Person DNs """
+        async def _resolver():
+            for dn in dns or []:
+                rdn = Person.extract_rdn(dn.decode())
+                yield await self._registry.get(Person, rdn)
 
-    def resolve_person(self, payload) -> Person:
-        return self._resolve_dn(_flatten(payload))
+        return _resolver
 
-    def resolve_people(self, payload) -> T.Iterator[Person]:
-        return map(self._resolve_dn, payload)
+    def get_person(self, dn) -> T.Coroutine:
+        """ Adaptor to resolve a single Person, if there is one """
+        async def _resolver():
+            if dn is None:
+                return None
+
+            assert len(dn) == 1
+            async for person in self.get_people(dn)():
+                return person
+
+        return _resolver
 
     @staticmethod
     def decode_prelims(sangerPrelimID) -> T.List[str]:
@@ -284,9 +294,9 @@ class Group(_Node):
         attr_map = {
             "name":        _Attribute("cn", adaptor=_flatten),
             "active":      _Attribute("sangerHumgenProjectActive", adaptor=_to_bool),
-            "pi":          _Attribute("sangerProjectPI", adaptor=self.resolve_person),
-            "owners":      _Attribute("owner", adaptor=self.resolve_people),
-            "members":     _Attribute("member", adaptor=self.resolve_people),
+            "pi":          _Attribute("sangerProjectPI", adaptor=self.get_person),
+            "owners":      _Attribute("owner", adaptor=self.get_people),
+            "members":     _Attribute("member", adaptor=self.get_people),
             "description": _Attribute("description", adaptor=_maybe_flatten),
             "prelims":     _Attribute("sangerPrelimID", adaptor=Group.decode_prelims)
             # sangerHumgenDataSecurityLevel
