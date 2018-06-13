@@ -43,6 +43,10 @@ class _Expirable(metaclass=ABCMeta):
         """ Update the object's state """
 
     @property
+    def shelf_life(self) -> T.TimeDelta:
+        return self._shelf_life
+
+    @property
     def has_expired(self) -> bool:
         """ Has our entity expired? """
         if self._last_updated is None:
@@ -136,16 +140,15 @@ class _Node(_Expirable):
 class NoMatches(BaseException):
     """ Raised when trying to seed the registry with no data """
 
-class Registry(T.Container[_Node]):
-    """ Container for nodes """
+class _BaseRegistry(_Expirable, T.Container[_Node], metaclass=ABCMeta):
+    """ Abstract base container for nodes """
     _server:ldap.Server
-    _shelf_life:T.TimeDelta
     _registry:T.Dict[str, _Node]
 
     def __init__(self, server:ldap.Server, shelf_life:T.TimeDelta) -> None:
         self._server = server
-        self._shelf_life = shelf_life
         self._registry = {}
+        super().__init__(shelf_life)
 
     def __contains__(self, dn:str) -> bool:
         return dn in self._registry
@@ -163,10 +166,6 @@ class Registry(T.Container[_Node]):
         self._server = server
         for node in self._registry:
             self._registry[node].reattach_server(server)
-
-    @property
-    def shelf_life(self) -> T.TimeDelta:
-        return self._shelf_life
 
     async def seed(self, cls:T.Type[_Node], search:str) -> None:
         """
@@ -243,7 +242,7 @@ class Person(_Node):
         """ Adaptor to determine the active status of a given entry """
         return _to_bool(sangerAgressoCurrentPerson or sangerActiveAccount)
 
-    def __init__(self, uid:str, registry:Registry) -> None:
+    def __init__(self, uid:str, registry:_BaseRegistry) -> None:
         attr_map = {
             "id":     _Attribute("uid", adaptor=_flatten),
             "name":   _Attribute("cn", adaptor=_flatten),
@@ -262,7 +261,7 @@ class Group(_Node):
     _rdn_attr = "cn"
     _base_dn = "ou=group,dc=sanger,dc=ac,dc=uk"
 
-    _registry:Registry
+    _registry:_BaseRegistry
 
     def get_people(self, dns) -> T.Coroutine:
         """ Adaptor to resolve a list of Person DNs """
@@ -290,7 +289,7 @@ class Group(_Node):
         """ Adaptor to decode the list of Prelim IDs """
         return [prelim.decode() for prelim in sangerPrelimID or []]
 
-    def __init__(self, cn:str, registry:Registry) -> None:
+    def __init__(self, cn:str, registry:_BaseRegistry) -> None:
         attr_map = {
             "name":        _Attribute("cn", adaptor=_flatten),
             "active":      _Attribute("sangerHumgenProjectActive", adaptor=_to_bool),
@@ -306,3 +305,14 @@ class Group(_Node):
 
         self._registry = registry
         super().__init__(cn, registry.server, attr_map, registry.shelf_life)
+
+
+class Registry(_BaseRegistry):
+    """ Human Genetics Programme registry """
+    async def __updator__(self, *_, **__) -> None:
+        """
+        (Re)seed the registry with groups from the Human Genetics
+        Programme and all user accounts
+        """
+        await self.seed(Person, "(uid=*)")
+        await self.seed(Group, "(objectClass=sangerHumgenProjectGroup)")
