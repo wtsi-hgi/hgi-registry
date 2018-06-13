@@ -39,7 +39,7 @@ class _Expirable(metaclass=ABCMeta):
         self._shelf_life = shelf_life
 
     @abstractmethod
-    async def __updator__(self, *args, **kwargs) -> None:
+    async def __updator__(self) -> None:
         """ Update the object's state """
 
     @property
@@ -59,9 +59,9 @@ class _Expirable(metaclass=ABCMeta):
     def last_updated(self) -> T.Optional[T.DateTime]:
         return self._last_updated
 
-    async def update(self, *args, **kwargs) -> None:
+    async def update(self) -> None:
         self._last_updated = time.now()
-        await self.__updator__(*args, **kwargs)
+        await self.__updator__()
 
 
 _AttrAdaptorT = T.Callable
@@ -109,7 +109,7 @@ class _Node(_Expirable):
 
         return self._attr_map[attr](self._entity)
 
-    async def __updator__(self, *_, **__) -> None:
+    async def __updator__(self) -> None:
         await self._entity.fetch()
 
     @classmethod
@@ -309,7 +309,7 @@ class Group(_Node):
 
 class Registry(_BaseRegistry):
     """ Human Genetics Programme registry """
-    async def __updator__(self, *_, **__) -> None:
+    async def __updator__(self) -> None:
         """
         (Re)seed the registry with groups from the Human Genetics
         Programme and all user accounts
