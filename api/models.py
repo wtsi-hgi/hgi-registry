@@ -72,7 +72,7 @@ _maybe_flatten = lambda x: _flatten(x) if x else None
 _to_bool = lambda x: _flatten(x).upper() in ["TRUE", "YES"]
 
 class _Attribute(object):
-    """ Potentially optional attribute, with an adaptor to munge data """
+    """ Attribute(s) adaptor interface for data munging """
     _attrs:T.Tuple[str, ...]
     _adaptor:_AttrAdaptorT
 
