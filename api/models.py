@@ -26,7 +26,7 @@ from common.utils import noop
 from . import ldap
 
 
-__all__ = ["Registry", "Person", "Group"]
+__all__ = ["Registry", "Person", "Group", "NoMatches"]
 
 
 class _Expirable(metaclass=ABCMeta):
@@ -133,6 +133,9 @@ class _Node(_Expirable):
         self._entity.server = server
 
 
+class NoMatches(BaseException):
+    """ Raised when trying to seed the registry with no data """
+
 class Registry(T.Container[_Node]):
     """ Container for nodes """
     _server:ldap.Server
@@ -180,8 +183,13 @@ class Registry(T.Container[_Node]):
             node._last_updated = time.now()
             return dn, node
 
+        found = False
         async for dn, node in self._server.search(cls._base_dn, ldap.Scope.OneLevel, search, adaptor=_adaptor):
             self._registry[dn] = node
+            found = True
+
+        if not found:
+            raise NoMatches(f"No matches found for {search} under {cls._base_dn} to seed registry")
 
     async def get(self, cls:T.Type[_Node], identity:str) -> _Node:
         """
