@@ -19,6 +19,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from abc import ABCMeta, abstractmethod
 import base64
+import json
 import re
 
 from common import types as T, time
@@ -64,6 +65,18 @@ class _Expirable(metaclass=ABCMeta):
         await self.__updator__()
 
 
+class _Serialisable(metaclass=ABCMeta):
+    @property
+    async def json(self) -> str:
+        """ Return the JSON serialisation of the object's serialisable form """
+        serialisable = await self.__serialisable__()
+        return json.dumps(serialisable, cls=time.JSONEncoder)
+
+    @abstractmethod
+    async def __serialisable__(self) -> T.Any:
+        """ Render a serialisable form of the object """
+
+
 _AttrAdaptorT = T.Callable
 
 # Basic adaptors to flatten/convert simple text attributes
@@ -85,8 +98,8 @@ class _Attribute(object):
     def __call__(self, entity:ldap.Entity) -> T.Any:
         return self._adaptor(*map(entity.get, self._attrs))
 
-class _Node(_Expirable):
-    """ Superclass for specific LDAP object classes """
+class _Node(_Expirable, _Serialisable, metaclass=ABCMeta):
+    """ Base class for specific LDAP objects """
     _rdn_attr:T.ClassVar[str]
     _base_dn:T.ClassVar[str]
 
@@ -141,7 +154,7 @@ class NoMatches(BaseException):
     """ Raised when trying to seed the registry with no data """
 
 class _BaseRegistry(_Expirable, T.Container[_Node], metaclass=ABCMeta):
-    """ Abstract base container for nodes """
+    """ Base container class for nodes """
     _server:ldap.Server
     _registry:T.Dict[str, _Node]
 
@@ -255,6 +268,11 @@ class Person(_Node):
 
         super().__init__(uid, registry.server, attr_map, registry.shelf_life)
 
+    async def __serialisable__(self) -> T.Any:
+        # TODO Flesh this out a bit
+        attrs = ["last_updated", "id", "name", "mail", "title", "human", "active"]
+        return {attr: getattr(self, attr) for attr in attrs}
+
 
 class Group(_Node):
     """ High level LDAP group model """
@@ -305,6 +323,10 @@ class Group(_Node):
 
         self._registry = registry
         super().__init__(cn, registry.server, attr_map, registry.shelf_life)
+
+    async def __serialisable__(self) -> T.Any:
+        # TODO
+        pass
 
 
 class Registry(_BaseRegistry):
