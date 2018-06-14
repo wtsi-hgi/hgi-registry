@@ -196,13 +196,12 @@ class _BaseRegistry(_Expirable, T.Container[_Node], metaclass=ABCMeta):
             node._last_updated = time.now()
             return dn, node
 
-        # Build conjoined search term
-        conjunction = "(&"
-        for object_class in cls._object_classes:
-            conjunction = f"{conjunction}(objectClass={ldap.escape(object_class)})"
-        if search is not None:
-            conjunction = f"{conjunction}{search}"
-        conjunction = f"{conjunction})"
+        # Build the conjunctive search term from the class' object
+        # classes and the sanitised search term, if provided
+        conjunction = "(&" \
+                    + "".join(f"(objectClass={ldap.escape(oc)})" for oc in cls._object_classes) \
+                    + (search or "") \
+                    + ")"
 
         found = False
         async for dn, node in self._server.search(cls._base_dn, ldap.Scope.OneLevel, conjunction, adaptor=_adaptor):
@@ -251,7 +250,7 @@ class Person(_Node):
         if jpegPhoto is None:
             return None
 
-        # TODO? Return an async generator instead? Is that overkill?
+        # TODO? Return an async generator instead; is that overkill?
         jpeg, *_ = map(base64.b64decode, jpegPhoto)
         return jpeg
 
@@ -285,7 +284,7 @@ class Person(_Node):
 
 
 class Group(_Node):
-    """ High level LDAP group model """
+    """ High level LDAP Human Genetics Programme group model """
     _rdn_attr = "cn"
     _base_dn = "ou=group,dc=sanger,dc=ac,dc=uk"
     _object_classes = ["posixGroup", "sangerHumgenProjectGroup"]
