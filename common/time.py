@@ -17,8 +17,25 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import json
 
-__all__ = ["now", "delta"]
-now = datetime.utcnow
+from common import types as T
+
+
+__all__ = ["JSONEncoder", "now", "delta"]
+
+
+now = lambda: datetime.utcnow().replace(tzinfo=timezone.utc)
 delta = timedelta
+
+
+_ISO8601 = "%Y-%m-%dT%H:%M:%SZ%z"
+
+class JSONEncoder(json.JSONEncoder):
+    """ JSON encoder that understands datetimes """
+    def default(self, obj:T.Any) -> T.Any:
+        if isinstance(obj, datetime):
+            return obj.strftime(_ISO8601)
+
+        return obj
