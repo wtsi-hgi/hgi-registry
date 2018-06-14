@@ -26,7 +26,7 @@ from common import types as T
 __all__ = ["JSONEncoder", "now", "delta"]
 
 
-now = lambda: datetime.utcnow().replace(tzinfo=timezone.utc)
+now = lambda: datetime.now(timezone.utc)
 delta = timedelta
 
 
