@@ -102,6 +102,7 @@ class _Node(_Expirable, _Serialisable, metaclass=ABCMeta):
     """ Base class for specific LDAP objects """
     _rdn_attr:T.ClassVar[str]
     _base_dn:T.ClassVar[str]
+    _object_classes:T.ClassVar[T.List[str]]
 
     _identity:str
     _entity:ldap.Entity
@@ -180,7 +181,7 @@ class _BaseRegistry(_Expirable, T.Container[_Node], metaclass=ABCMeta):
         for node in self._registry:
             self._registry[node].reattach_server(server)
 
-    async def seed(self, cls:T.Type[_Node], search:str) -> None:
+    async def seed(self, cls:T.Type[_Node], search:T.Optional[str] = None) -> None:
         """
         Seed the registry with nodes of the specified type as returned
         by the given search term. Note that the search term is assumed
@@ -195,13 +196,21 @@ class _BaseRegistry(_Expirable, T.Container[_Node], metaclass=ABCMeta):
             node._last_updated = time.now()
             return dn, node
 
+        # Build conjoined search term
+        conjunction = "(&"
+        for object_class in cls._object_classes:
+            conjunction = f"{conjunction}(objectClass={ldap.escape(object_class)})"
+        if search is not None:
+            conjunction = f"{conjunction}{search}"
+        conjunction = f"{conjunction})"
+
         found = False
-        async for dn, node in self._server.search(cls._base_dn, ldap.Scope.OneLevel, search, adaptor=_adaptor):
+        async for dn, node in self._server.search(cls._base_dn, ldap.Scope.OneLevel, conjunction, adaptor=_adaptor):
             self._registry[dn] = node
             found = True
 
         if not found:
-            raise NoMatches(f"No matches found for {search} under {cls._base_dn} to seed registry")
+            raise NoMatches(f"No matches found for {conjunction} under {cls._base_dn} to seed registry")
 
     async def get(self, cls:T.Type[_Node], identity:str) -> _Node:
         """
@@ -234,6 +243,7 @@ class Person(_Node):
     """ High level LDAP person model """
     _rdn_attr = "uid"
     _base_dn = "ou=people,dc=sanger,dc=ac,dc=uk"
+    _object_classes = ["posixAccount"]
 
     @staticmethod
     def decode_photo(jpegPhoto) -> T.Optional[bytes]:
@@ -278,6 +288,7 @@ class Group(_Node):
     """ High level LDAP group model """
     _rdn_attr = "cn"
     _base_dn = "ou=group,dc=sanger,dc=ac,dc=uk"
+    _object_classes = ["posixGroup", "sangerHumgenProjectGroup"]
 
     _registry:_BaseRegistry
 
@@ -336,5 +347,5 @@ class Registry(_BaseRegistry):
         (Re)seed the registry with groups from the Human Genetics
         Programme and all user accounts
         """
-        await self.seed(Person, "(uid=*)")
-        await self.seed(Group, "(objectClass=sangerHumgenProjectGroup)")
+        for cls in Person, Group:
+            await self.seed(cls)
