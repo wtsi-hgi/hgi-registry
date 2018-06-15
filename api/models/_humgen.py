@@ -1,0 +1,136 @@
+"""
+Copyright (c) 2018 Genome Research Ltd.
+
+Author: Christopher Harrison <ch12@sanger.ac.uk>
+
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at
+your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero
+General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+"""
+
+import base64
+
+from common import types as T
+from ._adaptors import Attribute, flatten, maybe_flatten, to_bool
+from ._bases import BaseNode, BaseRegistry
+
+
+class Person(BaseNode):
+    """ High level LDAP person model """
+    _rdn_attr = "uid"
+    _base_dn = "ou=people,dc=sanger,dc=ac,dc=uk"
+    _object_classes = ["posixAccount"]
+
+    @staticmethod
+    def decode_photo(jpegPhoto) -> T.Optional[bytes]:
+        """ Adaptor that returns the decoded JPEG data, if it exists """
+        if jpegPhoto is None:
+            return None
+
+        # TODO? Return an async generator instead; is that overkill?
+        jpeg, *_ = map(base64.b64decode, jpegPhoto)
+        return jpeg
+
+    @staticmethod
+    def is_human(sangerAgressoCurrentPerson) -> bool:
+        """ Adaptor to determine the humanity of a given entry  """
+        return sangerAgressoCurrentPerson is not None
+
+    @staticmethod
+    def is_active(sangerAgressoCurrentPerson, sangerActiveAccount) -> bool:
+        """ Adaptor to determine the active status of a given entry """
+        return to_bool(sangerAgressoCurrentPerson or sangerActiveAccount)
+
+    def __init__(self, uid:str, registry:BaseRegistry) -> None:
+        attr_map = {
+            "id":     Attribute("uid", adaptor=flatten),
+            "name":   Attribute("cn", adaptor=flatten),
+            "mail":   Attribute("mail", adaptor=flatten),
+            "title":  Attribute("title", adaptor=maybe_flatten),
+            "photo":  Attribute("jpegPhoto", adaptor=Person.decode_photo),
+            "human":  Attribute("sangerAgressoCurrentPerson", adaptor=Person.is_human),
+            "active": Attribute("sangerAgressoCurrentPerson", "sangerActiveAccount", adaptor=Person.is_active)
+        }
+
+        super().__init__(uid, registry.server, attr_map, registry.shelf_life)
+
+    async def __serialisable__(self) -> T.Any:
+        # TODO Flesh this out a bit
+        attrs = ["last_updated", "id", "name", "mail", "title", "human", "active"]
+        return {attr: getattr(self, attr) for attr in attrs}
+
+
+class Group(BaseNode):
+    """ High level LDAP Human Genetics Programme group model """
+    _rdn_attr = "cn"
+    _base_dn = "ou=group,dc=sanger,dc=ac,dc=uk"
+    _object_classes = ["posixGroup", "sangerHumgenProjectGroup"]
+
+    _registry:BaseRegistry
+
+    def get_people(self, dns) -> T.Coroutine:
+        """ Adaptor to resolve a list of Person DNs """
+        async def _resolver():
+            for dn in dns or []:
+                rdn = Person.extract_rdn(dn.decode())
+                yield await self._registry.get(Person, rdn)
+
+        return _resolver
+
+    def get_person(self, dn) -> T.Coroutine:
+        """ Adaptor to resolve a single Person, if there is one """
+        async def _resolver():
+            if dn is None:
+                return None
+
+            assert len(dn) == 1
+            async for person in self.get_people(dn)():
+                return person
+
+        return _resolver
+
+    @staticmethod
+    def decode_prelims(sangerPrelimID) -> T.List[str]:
+        """ Adaptor to decode the list of Prelim IDs """
+        return [prelim.decode() for prelim in sangerPrelimID or []]
+
+    def __init__(self, cn:str, registry:BaseRegistry) -> None:
+        attr_map = {
+            "name":        Attribute("cn", adaptor=flatten),
+            "active":      Attribute("sangerHumgenProjectActive", adaptor=to_bool),
+            "pi":          Attribute("sangerProjectPI", adaptor=self.get_person),
+            "owners":      Attribute("owner", adaptor=self.get_people),
+            "members":     Attribute("member", adaptor=self.get_people),
+            "description": Attribute("description", adaptor=maybe_flatten),
+            "prelims":     Attribute("sangerPrelimID", adaptor=Group.decode_prelims)
+            # sangerHumgenDataSecurityLevel
+            # sangerHumgenProjectStorageResources
+            # sangerHumgenProjectStorageQuotas
+        }
+
+        self._registry = registry
+        super().__init__(cn, registry.server, attr_map, registry.shelf_life)
+
+    async def __serialisable__(self) -> T.Any:
+        # TODO
+        pass
+
+
+class Registry(BaseRegistry):
+    """ Human Genetics Programme registry """
+    async def __updator__(self) -> None:
+        """
+        (Re)seed the registry with groups from the Human Genetics
+        Programme and all user accounts
+        """
+        for cls in Person, Group:
+            await self.seed(cls)
