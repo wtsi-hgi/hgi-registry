@@ -67,8 +67,10 @@ class Person(BaseNode):
         super().__init__(uid, registry.server, attr_map, registry.shelf_life)
 
     async def __serialisable__(self) -> T.Any:
-        attrs = ["last_updated", "id", "name", "mail", "title", "human", "active"]
+        attrs = ["last_updated", "name", "mail", "title", "human", "active"]
         output = {attr: getattr(self, attr) for attr in attrs}
+
+        output["id"] = Person.href(self, rel="self", value=self.id)
 
         # Link to photo, if it exists
         if self.photo is not None:
