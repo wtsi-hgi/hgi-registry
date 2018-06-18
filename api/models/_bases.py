@@ -45,7 +45,7 @@ class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
 
         self._attr_map = attr_map
 
-    def __getattr__(self, attr:str) -> str:
+    def __getattr__(self, attr:str) -> T.Any:
         if attr not in self._attr_map:
             raise AttributeError(f"No such attribute {attr}!")
 
