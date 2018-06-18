@@ -172,3 +172,16 @@ class Registry(BaseRegistry):
         """
         for cls in Person, Group:
             await self.seed(cls)
+
+    async def __serialisable__(self) -> T.Any:
+        groups = []
+        for gid in self.keys(Group):
+            group = await self.get(Group, gid)
+            groups.append(Group.href(group, rel="group", value=group.name))
+
+        people = []
+        for uid in self.keys(Person):
+            person = await self.get(Person, uid)
+            people.append(Person.href(person, rel="person", value=person.name))
+
+        return {"groups": groups, "people": people}

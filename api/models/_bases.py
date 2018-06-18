@@ -86,7 +86,7 @@ class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
 class NoMatches(BaseException):
     """ Raised when trying to seed the registry with no data """
 
-class BaseRegistry(Expirable, T.Container[BaseNode], metaclass=ABCMeta):
+class BaseRegistry(Expirable, Serialisable, T.Container[BaseNode], metaclass=ABCMeta):
     """ Base container class for nodes """
     _server:ldap.Server
     _registry:T.Dict[str, BaseNode]
