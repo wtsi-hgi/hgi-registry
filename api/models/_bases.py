@@ -22,11 +22,11 @@ import re
 
 from api import ldap
 from common import types as T, time
-from ._mixins import Expirable, Serialisable
+from ._mixins import Expirable, Serialisable, Hypermedia
 from ._adaptors import Attribute
 
 
-class BaseNode(Expirable, Serialisable, metaclass=ABCMeta):
+class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
     """ Base class for specific LDAP objects """
     _rdn_attr:T.ClassVar[str]
     _base_dn:T.ClassVar[str]
@@ -70,6 +70,10 @@ class BaseNode(Expirable, Serialisable, metaclass=ABCMeta):
     @property
     def dn(self) -> str:
         return self.__class__.build_dn(self._identity)
+
+    @property
+    def identity(self) -> str:
+        return self._identity
 
     def reattach_server(self, server:ldap.Server) -> None:
         """

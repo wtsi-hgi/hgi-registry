@@ -22,6 +22,7 @@ import base64
 from common import types as T
 from ._adaptors import Attribute, flatten, maybe_flatten, to_bool
 from ._bases import BaseNode, BaseRegistry
+from ._mixins import Hypermedia
 
 
 class Person(BaseNode):
@@ -29,6 +30,8 @@ class Person(BaseNode):
     _rdn_attr = "uid"
     _base_dn = "ou=people,dc=sanger,dc=ac,dc=uk"
     _object_classes = ["posixAccount"]
+
+    _base_uri = "/people"
 
     @staticmethod
     def decode_photo(jpegPhoto) -> T.Optional[bytes]:
@@ -64,9 +67,22 @@ class Person(BaseNode):
         super().__init__(uid, registry.server, attr_map, registry.shelf_life)
 
     async def __serialisable__(self) -> T.Any:
-        # TODO Flesh this out a bit
         attrs = ["last_updated", "id", "name", "mail", "title", "human", "active"]
-        return {attr: getattr(self, attr) for attr in attrs}
+        output = {attr: getattr(self, attr) for attr in attrs}
+
+        # Link to photo, if it exists
+        if self.photo is not None:
+            class _Photo(Hypermedia):
+                """ Dummy photo hypermedia entity """
+                _base_uri = f"{self._base_uri}/{self._identity}"
+
+                @property
+                def identity(self) -> str:
+                    return "photo"
+
+            output["photo"] = Person.href(_Photo(), rel="photo")
+
+        return output
 
 
 class Group(BaseNode):

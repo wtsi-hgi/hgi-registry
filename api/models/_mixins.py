@@ -59,6 +59,7 @@ class Expirable(metaclass=ABCMeta):
 
 
 class Serialisable(metaclass=ABCMeta):
+    """ Base class for JSON-serialisable objects """
     @property
     async def json(self) -> str:
         """ Return the JSON serialisation of the object's serialisable form """
@@ -68,3 +69,22 @@ class Serialisable(metaclass=ABCMeta):
     @abstractmethod
     async def __serialisable__(self) -> T.Any:
         """ Render a serialisable form of the object """
+
+
+class Hypermedia(metaclass=ABCMeta):
+    """ Base class for hypermedia references """
+    _base_uri:T.ClassVar[str]
+
+    @property
+    @abstractmethod
+    def identity(self) -> str:
+        """ Object's identity for its URI """
+
+    @staticmethod
+    def href(link:"Hypermedia", *, rel:str, value:T.Any = None) -> T.Dict:
+        """ Return the hypermedia reference to a hypermedia entity """
+        return {
+            "href": f"{link._base_uri}/{link.identity}",
+            "rel":  rel,
+            **({"value": value} if value else {})
+        }
