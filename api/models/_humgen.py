@@ -184,4 +184,4 @@ class Registry(BaseRegistry):
             person = await self.get(Person, uid)
             people.append(Person.href(person, rel="person", value=person.name))
 
-        return {"groups": groups, "people": people}
+        return {"last_updated": self.last_updated, "groups": groups, "people": people}
