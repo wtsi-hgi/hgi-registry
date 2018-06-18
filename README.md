@@ -38,33 +38,81 @@ data returned may be stale and not reflect the true state at any given
 time. However, cache entries will be refreshed periodically to minimise
 this effect.
 
-The API server exposes the following endpoints:
+## Hypermedia
 
-## `/groups`
+JSON values that represent links within the graph will be a JSON object
+with:
+
+* An `href` entity, containing the URI of the linked resource;
+* A `rel` or `rev` (or both) entity, describing the link and reverse
+  link relation, respectively;
+* An optional `value` entity, that contains further semantic information
+  about the link target, without the need for dereferencing.
+
+## Endpoints
+
+### `/groups`
 
 Method | Content Type       | Behaviour
 :----- | :----------------- | :-----------------------------------------
 `GET`  | `application/json` | Return the identities of every project and team group in the Human Genetics Programme.
 
-## `/groups/<GROUP>`
+#### Schema
+
+Array of group [hypermedia entities](#hypermedia).
+
+### `/groups/<GROUP>`
 
 Method | Content Type       | Behaviour
 :----- | :----------------- | :-----------------------------------------
 `GET`  | `application/json` | Return the details of the specific group given by `<GROUP>`.
 
-## `/people`
+#### Schema
+
+* `id` [Hypermedia entity](#hypermedia) of themself;
+* `active` Predicate of whether this is an active group;
+* `description` Group description, `null` for unknown;
+* `prelims` Array of prelim IDs;
+* `pi` [Hypermedia entity](#hypermedia) for the group's PI;
+* `owners` Array of [hypermedia entities](#hypermedia) of the group's
+  owners;
+* `members` Array of [hypermedia entities](#hypermedia) of the group's
+  members;
+* `last_updated` The timestamp of the last update for this record (in
+  ISO8601 format).
+
+### `/people`
 
 Method | Content Type       | Behaviour
 :----- | :----------------- | :-----------------------------------------
 `GET`  | `application/json` | Return the identities of every user account.
 
-## `/people/<USER_ID>`
+#### Schema
+
+Array of person [hypermedia entites](#hypermedia).
+
+### `/people/<USER_ID>`
 
 Method | Content Type       | Behaviour
 :----- | :----------------- | :-----------------------------------------
 `GET`  | `application/json` | Return the details of the specific user given by `<USER_ID>`.
 
-## `/people/<USER_ID>/photo`
+#### Schema
+
+* `id` [Hypermedia entity](#hypermedia) of themself;
+* `name` Person's full name;
+* `mail` Person's e-mail address;
+* `title` Person's job title, `null` for unknown;
+* `human` Predicate of whether this is a real (human) person;
+* `active` Predicate of whether this is an active account;
+* `photo` [Hypermedia entity](#hypermedia) of person's photo, if they
+  have one;
+* `involvement` Array of group [hypermedia entites](#hypermedia) for the
+  groups in which the person is involved and their capacity therein;
+* `last_updated` The timestamp of the last update for this record (in
+  ISO8601 format).
+
+### `/people/<USER_ID>/photo`
 
 Method | Content Type       | Behaviour
 :----- | :----------------- | :-----------------------------------------
