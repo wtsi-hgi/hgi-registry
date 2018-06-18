@@ -19,9 +19,10 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import base64
 
+from api import ldap
 from common import types as T
 from ._adaptors import Attribute, flatten, maybe_flatten, to_bool
-from ._bases import BaseNode, BaseRegistry
+from ._bases import BaseNode, BaseRegistry, NoMatches
 from ._mixins import Hypermedia
 
 
@@ -32,6 +33,8 @@ class Person(BaseNode):
     _object_classes = ["posixAccount"]
 
     _base_uri = "/people"
+
+    _registry:BaseRegistry
 
     @staticmethod
     def decode_photo(jpegPhoto) -> T.Optional[bytes]:
@@ -64,6 +67,7 @@ class Person(BaseNode):
             "active": Attribute("sangerAgressoCurrentPerson", "sangerActiveAccount", adaptor=Person.is_active)
         }
 
+        self._registry = registry
         super().__init__(uid, registry.server, attr_map, registry.shelf_life)
 
     async def __serialisable__(self) -> T.Any:
@@ -84,6 +88,22 @@ class Person(BaseNode):
 
             output["photo"] = Person.href(_Photo(), rel="photo")
 
+        # Group involvement
+        involvement = []
+        for gid in self._registry.keys(Group):
+            group = await self._registry.get(Group, gid)
+
+            if await group.is_pi(self):
+                involvement.append(Group.href(group, rev="pi", value=group.name))
+
+            if await group.is_owner(self):
+                involvement.append(Group.href(group, rev="owner", value=group.name))
+
+            if await group.is_member(self):
+                involvement.append(Group.href(group, rev="member", value=group.name))
+
+        output["involvement"] = involvement
+
         return output
 
 
@@ -101,8 +121,14 @@ class Group(BaseNode):
         """ Adaptor to resolve a list of Person DNs """
         async def _resolver():
             for dn in dns or []:
-                rdn = Person.extract_rdn(dn.decode())
-                yield await self._registry.get(Person, rdn)
+                try:
+                    rdn = Person.extract_rdn(dn.decode())
+                    yield await self._registry.get(Person, rdn)
+
+                except (ldap.NoSuchDistinguishedName, NoMatches):
+                    # Invalid entries in the LDAP record should be
+                    # skipped over and (TODO) warned about in the logs
+                    pass
 
         return _resolver
 
@@ -161,6 +187,28 @@ class Group(BaseNode):
         output["members"] = members
 
         return output
+
+    async def _is_involved(self, who:Person, capacity:str) -> bool:
+        """ Check a Person's involvement in a group """
+        if capacity == "pi":
+            pi = await self.pi()
+            return who == pi
+
+        if hasattr(self, capacity):
+            async for user in getattr(self, capacity)():
+                if who == user:
+                    return True
+
+            return False
+
+    async def is_pi(self, who:Person) -> bool:
+        return await self._is_involved(who, "pi")
+
+    async def is_owner(self, who:Person) -> bool:
+        return await self._is_involved(who, "owners")
+
+    async def is_member(self, who:Person) -> bool:
+        return await self._is_involved(who, "members")
 
 
 class Registry(BaseRegistry):
