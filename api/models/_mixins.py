@@ -81,10 +81,13 @@ class Hypermedia(metaclass=ABCMeta):
         """ Object's identity for its URI """
 
     @staticmethod
-    def href(link:"Hypermedia", *, rel:str, value:T.Any = None) -> T.Dict:
+    def href(link:"Hypermedia", *, rel:T.Optional[str] = None, rev:T.Optional[str] = None, value:T.Any = None) -> T.Dict:
         """ Return the hypermedia reference to a hypermedia entity """
+        assert rel or rev
+
         return {
             "href": f"{link._base_uri}/{link.identity}",
-            "rel":  rel,
+            **({"rel": rel} if rel else {}),
+            **({"rev": rev} if rev else {}),
             **({"value": value} if value else {})
         }
