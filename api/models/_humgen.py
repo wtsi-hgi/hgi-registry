@@ -93,6 +93,8 @@ class Group(BaseNode):
     _base_dn = "ou=group,dc=sanger,dc=ac,dc=uk"
     _object_classes = ["posixGroup", "sangerHumgenProjectGroup"]
 
+    _base_uri = "/groups"
+
     _registry:BaseRegistry
 
     def get_people(self, dns) -> T.Coroutine:
@@ -139,8 +141,26 @@ class Group(BaseNode):
         super().__init__(cn, registry.server, attr_map, registry.shelf_life)
 
     async def __serialisable__(self) -> T.Any:
-        # TODO
-        pass
+        attrs = ["last_updated", "active", "description", "prelims"]
+        output = {attr: getattr(self, attr) for attr in attrs}
+
+        output["id"] = Group.href(self, rel="self", value=self.name)
+
+        pi = await self.pi()
+        output["pi"] = Person.href(pi, rel="pi", value=pi.name)
+
+        owners = []
+        async for owner in self.owners():
+            owners.append(Person.href(owner, rel="owner", value=owner.name))
+
+        members = []
+        async for member in self.members():
+            members.append(Person.href(member, rel="member", value=member.name))
+
+        output["owners"] = owners
+        output["members"] = members
+
+        return output
 
 
 class Registry(BaseRegistry):
