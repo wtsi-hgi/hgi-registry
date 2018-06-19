@@ -79,5 +79,41 @@ class TestSerialisable(unittest.TestCase):
         self.assertEqual(json, "\"foo\"")
 
 
+class DummyHypermedia(m.Hypermedia):
+    _base_uri = "/base"
+
+    @property
+    def identity(self) -> str:
+        return "foo"
+
+class TestHypermedia(unittest.TestCase):
+    def test_href(self):
+        hyper = DummyHypermedia()
+
+        self.assertRaises(AssertionError, DummyHypermedia.href, hyper)
+
+        self.assertEqual(DummyHypermedia.href(hyper, rel="foo"), {
+            "href": "/base/foo",
+            "rel": "foo"
+        })
+
+        self.assertEqual(DummyHypermedia.href(hyper, rev="foo"), {
+            "href": "/base/foo",
+            "rev": "foo"
+        })
+
+        self.assertEqual(DummyHypermedia.href(hyper, rel="foo", rev="bar"), {
+            "href": "/base/foo",
+            "rel": "foo",
+            "rev": "bar"
+        })
+
+        self.assertEqual(DummyHypermedia.href(hyper, rel="foo", value="bar"), {
+            "href": "/base/foo",
+            "rel": "foo",
+            "value": "bar"
+        })
+
+
 if __name__ == "__main__":
     unittest.main()
