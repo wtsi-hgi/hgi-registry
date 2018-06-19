@@ -22,7 +22,7 @@ from unittest.mock import patch
 
 from tests import async_test
 from api.models import _mixins as m
-from common import time
+from common import types as T, time
 
 
 class DummyExpirable(m.Expirable):
@@ -65,6 +65,18 @@ class TestExpirable(unittest.TestCase):
 
             mock_time.now.return_value = 124
             self.assertTrue(expirable.has_expired)
+
+
+class DummySerialisable(m.Serialisable):
+    async def __serialisable__(self) -> T.Any:
+        return "foo"
+
+class TestSerialisable(unittest.TestCase):
+    @async_test
+    async def test_json_serialisation(self):
+        serialisable = DummySerialisable()
+        json = await serialisable.json
+        self.assertEqual(json, "\"foo\"")
 
 
 if __name__ == "__main__":
