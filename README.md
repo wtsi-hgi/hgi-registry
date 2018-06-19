@@ -59,7 +59,8 @@ Method | Content Type       | Behaviour
 
 #### Schema
 
-Array of group [hypermedia entities](#hypermedia).
+Array of group [hypermedia entities](#hypermedia), with their POSIX
+names dereferenced.
 
 ### `/groups/<GROUP>`
 
@@ -69,15 +70,17 @@ Method | Content Type       | Behaviour
 
 #### Schema
 
-* `id` [Hypermedia entity](#hypermedia) of themself;
+* `id` [Hypermedia entity](#hypermedia) of itself, with its POSIX group
+  ID dereferenced;
 * `active` Predicate of whether this is an active group;
 * `description` Group description, `null` for unknown;
 * `prelims` Array of prelim IDs;
-* `pi` [Hypermedia entity](#hypermedia) for the group's PI;
+* `pi` [Hypermedia entity](#hypermedia) for the group's PI, with their
+  full name dereferenced;
 * `owners` Array of [hypermedia entities](#hypermedia) of the group's
-  owners;
+  owners, with their full names dereferenced;
 * `members` Array of [hypermedia entities](#hypermedia) of the group's
-  members;
+  members, with their full names dereferenced;
 * `last_updated` The timestamp of the last update for this record (in
   ISO8601 format).
 
@@ -89,7 +92,8 @@ Method | Content Type       | Behaviour
 
 #### Schema
 
-Array of person [hypermedia entites](#hypermedia).
+Array of person [hypermedia entites](#hypermedia), with their full names
+dereferenced.
 
 ### `/people/<USER_ID>`
 
@@ -99,16 +103,18 @@ Method | Content Type       | Behaviour
 
 #### Schema
 
-* `id` [Hypermedia entity](#hypermedia) of themself;
+* `id` [Hypermedia entity](#hypermedia) of themself, with their POSIX
+  user ID dereferenced;
 * `name` Person's full name;
 * `mail` Person's e-mail address;
 * `title` Person's job title, `null` for unknown;
-* `human` Predicate of whether this is a real (human) person;
+* `human` Predicate of whether this is a real (i.e., human) person;
 * `active` Predicate of whether this is an active account;
 * `photo` [Hypermedia entity](#hypermedia) of person's photo, if they
   have one;
 * `involvement` Array of group [hypermedia entites](#hypermedia) for the
-  groups in which the person is involved and their capacity therein;
+  groups in which the person is involved and their capacity therein,
+  with said groups' POSIX group IDs dereferenced;
 * `last_updated` The timestamp of the last update for this record (in
   ISO8601 format).
 
