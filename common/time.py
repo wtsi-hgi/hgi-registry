@@ -38,4 +38,6 @@ class JSONEncoder(json.JSONEncoder):
         if isinstance(obj, datetime):
             return obj.strftime(_ISO8601)
 
+        # TODO? Serialisation for timedelta
+
         super().default(obj)
