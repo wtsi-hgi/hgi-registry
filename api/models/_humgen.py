@@ -21,7 +21,8 @@ import base64
 
 from api import ldap
 from common import types as T
-from ._adaptors import Attribute, flatten, maybe_flatten, to_bool
+from common.utils import maybe
+from ._adaptors import Attribute, flatten, to_bool
 from ._bases import BaseNode, BaseRegistry, NoMatches
 from ._mixins import Hypermedia
 
@@ -49,19 +50,19 @@ class Person(BaseNode):
     @staticmethod
     def is_human(sangerAgressoCurrentPerson) -> bool:
         """ Adaptor to determine the humanity of a given entry  """
-        return sangerAgressoCurrentPerson is not None
+        return maybe(to_bool)(sangerAgressoCurrentPerson) is not None
 
     @staticmethod
     def is_active(sangerAgressoCurrentPerson, sangerActiveAccount) -> bool:
         """ Adaptor to determine the active status of a given entry """
-        return to_bool(sangerAgressoCurrentPerson or sangerActiveAccount)
+        return maybe(to_bool)(sangerAgressoCurrentPerson) or maybe(to_bool)(sangerActiveAccount)
 
     def __init__(self, uid:str, registry:BaseRegistry) -> None:
         attr_map = {
             "id":     Attribute("uid", adaptor=flatten),
             "name":   Attribute("cn", adaptor=flatten),
             "mail":   Attribute("mail", adaptor=flatten),
-            "title":  Attribute("title", adaptor=maybe_flatten),
+            "title":  Attribute("title", adaptor=maybe(flatten)),
             "photo":  Attribute("jpegPhoto", adaptor=Person.decode_photo),
             "human":  Attribute("sangerAgressoCurrentPerson", adaptor=Person.is_human),
             "active": Attribute("sangerAgressoCurrentPerson", "sangerActiveAccount", adaptor=Person.is_active)
@@ -156,7 +157,7 @@ class Group(BaseNode):
             "pi":          Attribute("sangerProjectPI", adaptor=self.get_person),
             "owners":      Attribute("owner", adaptor=self.get_people),
             "members":     Attribute("member", adaptor=self.get_people),
-            "description": Attribute("description", adaptor=maybe_flatten),
+            "description": Attribute("description", adaptor=maybe(flatten)),
             "prelims":     Attribute("sangerPrelimID", adaptor=Group.decode_prelims)
             # sangerHumgenDataSecurityLevel
             # sangerHumgenProjectStorageResources

@@ -17,5 +17,15 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
+from . import types as T
+
 noop = lambda *_, **__: None
 identity = lambda x: x
+
+
+_S = T.TypeVar("_S")
+_T = T.TypeVar("_T")
+
+def maybe(fn:T.Callable[[_S], _T]) -> T.Callable[[_S], T.Optional[_T]]:
+    """ Return a version of a function that returns None if its input is falsy """
+    return lambda x: fn(x) if x else None

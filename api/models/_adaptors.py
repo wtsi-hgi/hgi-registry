@@ -38,8 +38,6 @@ class Attribute(object):
     def __call__(self, entity:ldap.Entity) -> T.Any:
         return self._adaptor(*map(entity.get, self._attrs))
 
-
 # Basic adaptors to flatten/convert simple text attributes
 flatten = lambda x: x[0].decode()
-maybe_flatten = lambda x: flatten(x) if x else None
 to_bool = lambda x: flatten(x).upper() in ["TRUE", "YES"]
