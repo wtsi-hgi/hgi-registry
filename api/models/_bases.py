@@ -65,11 +65,11 @@ class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
 
     @classmethod
     def build_dn(cls, identity:str) -> str:
-        return f"{cls._rdn_attr}={identity},{cls._base_dn}"
+        return f"{cls._rdn_attr}={ldap.escape(identity)},{cls._base_dn}"
 
     @property
     def dn(self) -> str:
-        return self.__class__.build_dn(self._identity)
+        return self.build_dn(self._identity)
 
     @property
     def identity(self) -> str:
