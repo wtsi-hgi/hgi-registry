@@ -23,20 +23,20 @@ import json
 from common import types as T
 
 
-__all__ = ["JSONEncoder", "now", "delta"]
+__all__ = ["ISO8601", "JSONEncoder", "now", "delta"]
 
 
 now = lambda: datetime.now(timezone.utc)
 delta = timedelta
 
 
-_ISO8601 = "%Y-%m-%dT%H:%M:%SZ%z"
+ISO8601 = "%Y-%m-%dT%H:%M:%SZ%z"
 
 class JSONEncoder(json.JSONEncoder):
     """ JSON encoder that understands datetimes """
     def default(self, obj:T.Any) -> T.Any:
         if isinstance(obj, datetime):
-            return obj.strftime(_ISO8601)
+            return obj.strftime(ISO8601)
 
         # TODO? Serialisation for timedelta
 
