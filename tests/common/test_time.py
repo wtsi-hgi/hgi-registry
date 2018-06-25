@@ -28,7 +28,7 @@ class TestJSONEncoder(unittest.TestCase):
     def test_encoding(self):
         now = time.now().replace(microsecond=0)
         encoded = json.dumps(now, cls=time.JSONEncoder)
-        self.assertEqual(now, datetime.strptime(encoded, f"\"{time._ISO8601}\""))
+        self.assertEqual(now, datetime.strptime(encoded, f"\"{time.ISO8601}\""))
 
     def test_fallback(self):
         class _Dummy(object):
