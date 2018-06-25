@@ -140,7 +140,7 @@ class BaseRegistry(Expirable, Serialisable, T.Container[BaseNode], metaclass=ABC
                     + ")"
 
         found = False
-        log(f"Seeding registry with results from {conjunction}...", Level.Debug)
+        log(f"Seeding registry with {cls.__name__} results from {conjunction}...", Level.Debug)
         async for dn, node in self._server.search(cls._base_dn, ldap.Scope.OneLevel, conjunction, adaptor=_adaptor):
             self._registry[dn] = node
             found = True

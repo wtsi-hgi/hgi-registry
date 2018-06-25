@@ -127,10 +127,13 @@ class Group(BaseNode):
                     rdn = Person.extract_rdn(dn)
                     yield await self._registry.get(Person, rdn)
 
-                except (ldap.NoSuchDistinguishedName, NoMatches):
-                    # Invalid entries in the LDAP record should be
-                    # skipped over and warned about in the logs
-                    log(f"Cannot resolve {dn} for {self._identity} group", Level.Warning)
+                except ldap.NoSuchDistinguishedName:
+                    # Invalid Person DN in group LDAP record
+                    log(f"Group {self._identity} refers to an invalid person, with DN \"{dn}\"; please correct {self.dn}", Level.Warning)
+
+                except NoMatches:
+                    # No matching Person found
+                    log(f"Group {self._identity} refers to an irresolvable person, with ID \"{rdn}\"; please correct {self.dn}", Level.Warning)
 
         return _resolver
 
