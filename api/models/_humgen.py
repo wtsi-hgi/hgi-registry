@@ -21,8 +21,8 @@ import base64
 
 from api import ldap
 from common import types as T
-from common.utils import maybe
 from common.logging import Level, log
+from common.utils import maybe
 from ._adaptors import Attribute, flatten, to_bool
 from ._bases import BaseNode, BaseRegistry, NoMatches
 from ._mixins import Hypermedia

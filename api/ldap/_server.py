@@ -23,6 +23,7 @@ from ldap.ldapobject import LDAPObject
 from ldap.resiter import ResultProcessor
 
 from common import types as T
+from common.logging import Level, log
 from common.utils import identity
 from . import _types as ldapT
 from ._exceptions import *
@@ -83,9 +84,11 @@ class Server(LDAPObject, ResultProcessor):
                 yield adaptor(result)
 
         except ldap.NO_SUCH_OBJECT:
+            log(f"No such DN {base}", Level.Error)
             raise NoSuchDistinguishedName(f"Base DN {base} does not exist")
 
         except ldap.SERVER_DOWN:
+            log(f"Lost connection to {self._server_uri}", Level.Error)
             raise CannotConnect(f"Cannot connect to {self._server_uri}")
 
 
