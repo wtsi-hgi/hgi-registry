@@ -22,6 +22,7 @@ import base64
 from api import ldap
 from common import types as T
 from common.utils import maybe
+from common.logging import Level, log
 from ._adaptors import Attribute, flatten, to_bool
 from ._bases import BaseNode, BaseRegistry, NoMatches
 from ._mixins import Hypermedia
@@ -121,15 +122,15 @@ class Group(BaseNode):
     def get_people(self, dns) -> T.Coroutine:
         """ Adaptor to resolve a list of Person DNs """
         async def _resolver():
-            for dn in dns or []:
+            for dn in map(lambda x: x.decode(), dns or []):
                 try:
-                    rdn = Person.extract_rdn(dn.decode())
+                    rdn = Person.extract_rdn(dn)
                     yield await self._registry.get(Person, rdn)
 
                 except (ldap.NoSuchDistinguishedName, NoMatches):
                     # Invalid entries in the LDAP record should be
-                    # skipped over and (TODO) warned about in the logs
-                    pass
+                    # skipped over and warned about in the logs
+                    log(f"Cannot resolve {dn} for {self._identity} group", Level.Warning)
 
         return _resolver
 
@@ -219,6 +220,7 @@ class Registry(BaseRegistry):
         (Re)seed the registry with groups from the Human Genetics
         Programme and all user accounts
         """
+        log("Updating registry", Level.Debug)
         for cls in Person, Group:
             await self.seed(cls)
 

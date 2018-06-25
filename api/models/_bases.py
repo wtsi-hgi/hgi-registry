@@ -22,6 +22,7 @@ import re
 
 from api import ldap
 from common import types as T, time
+from common.logging import Level, log
 from ._mixins import Expirable, Serialisable, Hypermedia
 from ._adaptors import Attribute
 
@@ -52,6 +53,7 @@ class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
         return self._attr_map[attr](self._entity)
 
     async def __updator__(self) -> None:
+        log(f"Updating {self._identity}", Level.Debug)
         await self._entity.fetch()
 
     @classmethod
@@ -80,6 +82,7 @@ class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
         Reattach an LDAP server to the node's entity, in the event of
         connection problems
         """
+        log(f"Attaching {self._identity} to {server._server_uri}", Level.Debug)
         self._entity.server = server
 
 
@@ -109,6 +112,7 @@ class BaseRegistry(Expirable, Serialisable, T.Container[BaseNode], metaclass=ABC
         Reattach an LDAP server to every node, in the event of
         connection problems
         """
+        log(f"Reattaching all nodes to {server._server_uri}", Level.Debug)
         self._server = server
         for node in self._registry:
             self._registry[node].reattach_server(server)
@@ -136,6 +140,7 @@ class BaseRegistry(Expirable, Serialisable, T.Container[BaseNode], metaclass=ABC
                     + ")"
 
         found = False
+        log(f"Seeding registry with results from {conjunction}...", Level.Debug)
         async for dn, node in self._server.search(cls._base_dn, ldap.Scope.OneLevel, conjunction, adaptor=_adaptor):
             self._registry[dn] = node
             found = True
