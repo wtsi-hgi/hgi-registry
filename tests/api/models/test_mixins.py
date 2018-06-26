@@ -32,7 +32,7 @@ class DummyExpirable(m.Expirable):
         if not hasattr(self, "update_count"):
             self.update_count = 0
 
-        self.update_count = self.update_count + 1
+        self.update_count += 1
 
 class TestExpirable(unittest.TestCase):
     @async_test

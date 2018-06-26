@@ -44,7 +44,7 @@ class TestResultGenerator(unittest.TestCase):
         async for dn, entry in s._SearchResults(_mock_results(10)):
             self.assertEqual(dn, "dn")
             self.assertEqual(entry, {"attribute": "value"})
-            results = results + 1
+            results += 1
 
         self.assertEqual(results, 10)
 
