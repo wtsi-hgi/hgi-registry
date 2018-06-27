@@ -18,16 +18,25 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from common.logging import Level, log
+from ._error import BaseHTTPError, error
 from ._types import Application, Request, Response, Handler
 
 
-async def catch500(app:Application, handler:Handler) -> Handler:
+async def catch500(_app:Application, handler:Handler) -> Handler:
     """ Internal Server Error catch-all """
     async def _middleware(request:Request) -> Response:
         try:
             return await handler(request)
 
-        except Exception:
-            pass
+        except BaseHTTPError as e:
+            # Reraise and log known errors
+            log(e.description, Level.Error)
+            raise
+
+        except Exception as e:
+            # Catch and log everything else as a 500 Internal Server Error
+            message = str(e)
+            log(message, Level.Error)
+            raise error(500, message)
 
     return _middleware
