@@ -18,6 +18,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from abc import ABCMeta
+from asyncio import Lock
 import re
 
 from api import ldap
@@ -94,9 +95,12 @@ class BaseRegistry(Expirable, Serialisable, T.Container[BaseNode], metaclass=ABC
     _server:ldap.Server
     _registry:T.Dict[str, BaseNode]
 
+    _seed_lock:T.Dict[T.Type[BaseNode], Lock]
+
     def __init__(self, server:ldap.Server, shelf_life:T.TimeDelta) -> None:
         self._server = server
         self._registry = {}
+        self._seed_lock = {}
         super().__init__(shelf_life)
 
     def __contains__(self, dn:str) -> bool:
@@ -141,9 +145,17 @@ class BaseRegistry(Expirable, Serialisable, T.Container[BaseNode], metaclass=ABC
 
         found = False
         log(f"Seeding registry with {cls.__name__} results from {conjunction}...", Level.Debug)
-        async for dn, node in self._server.search(cls._base_dn, ldap.Scope.OneLevel, conjunction, adaptor=_adaptor):
-            self._registry[dn] = node
-            found = True
+
+        if cls not in self._seed_lock:
+            # Create seeding lock for the given class, if it doesn't
+            # exist. We reasonably assume that the data fetched for each
+            # node class is mutually exclusive.
+            self._seed_lock[cls] = Lock()
+
+        async with self._seed_lock[cls]:
+            async for dn, node in self._server.search(cls._base_dn, ldap.Scope.OneLevel, conjunction, adaptor=_adaptor):
+                self._registry[dn] = node
+                found = True
 
         if not found:
             raise NoMatches(f"No matches found for {conjunction} under {cls._base_dn} to seed registry")
