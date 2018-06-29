@@ -26,7 +26,7 @@ from types import TracebackType
 from . import types as T, time
 
 
-__all__ = ["Level", "log"]
+__all__ = ["Level", "get_logger", "log"]
 
 
 class Level(Enum):
@@ -61,7 +61,7 @@ def _exception_handler(logger:logging.Logger) -> T.Callable:
 
     return _log_uncaught_exception
 
-def _init_logger() -> logging.Logger:
+def get_logger() -> logging.Logger:
     """ Initialise the logger and return it """
     if _LOGGER in logging.Logger.manager.loggerDict:
         return logging.getLogger(_LOGGER)
@@ -82,5 +82,5 @@ def _init_logger() -> logging.Logger:
 
 def log(message:str, level:Level = Level.Info) -> None:
     """ Log a message at an optional level """
-    logger = _init_logger()
+    logger = get_logger()
     logger.log(level.value, message)
