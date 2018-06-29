@@ -17,9 +17,15 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
+from functools import wraps
+
+from common import types as T
 from common.logging import Level, log
 from ._error import BaseHTTPError, error
 from ._types import Application, Request, Response, Handler
+
+
+_HanderDecoratorT = T.Callable[[Handler], Handler]
 
 
 async def catch500(_app:Application, handler:Handler) -> Handler:
@@ -40,3 +46,31 @@ async def catch500(_app:Application, handler:Handler) -> Handler:
             raise error(500, message)
 
     return _middleware
+
+
+def allow(*methods:str) -> _HanderDecoratorT:
+    """
+    Parametrisable handler decorator which checks the request method
+    matches what's allowed (raising an error, if not) and responds
+    appropriately to an OPTIONS request
+    """
+    # Allowed methods (obviously OPTIONS is included)
+    allowed = {m.upper() for m in [*methods, "OPTIONS"]}
+    allow_header = {"Allow": ", ".join(allowed)}
+
+    def _decorator(handler:Handler) -> Handler:
+        """ Decorator that handles the allowed methods """
+
+        async def _decorated(request:Request) -> Response:
+            """ Check request method against allowed methods """
+            if request.method not in allowed:
+                raise error(405, f"Cannot {request.method} the resource at {request.url}.", headers=allow_header)
+
+            if request.method == "OPTIONS":
+                return Response(status=200, headers=allow_header)
+
+            return await handler(request)
+
+        return _decorated
+
+    return _decorator
