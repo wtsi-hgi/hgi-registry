@@ -57,8 +57,9 @@ def allow(*methods:str) -> _HandlerDecoratorT:
     matches what's allowed (raising an error, if not) and responds
     appropriately to an OPTIONS request
     """
-    # Allowed methods (obviously OPTIONS is included)
-    allowed = {m.upper() for m in [*methods, "OPTIONS"]}
+    # Allowed methods, obviously including OPTIONS and automatically
+    # providing HEAD support
+    allowed = {m.upper() for m in [*methods, "OPTIONS", "HEAD"]}
     allow_header = {"Allow": ", ".join(allowed)}
 
     def _decorator(handler:Handler) -> Handler:
@@ -72,7 +73,14 @@ def allow(*methods:str) -> _HandlerDecoratorT:
             if request.method == "OPTIONS":
                 return Response(status=200, headers=allow_header)
 
-            return await handler(request)
+            response = await handler(request)
+
+            if request.method == "HEAD":
+                content_length = len(response.body)
+                response.body = None
+                response.headers["Content-Length"] = str(content_length)
+
+            return response
 
         return _decorated
 
