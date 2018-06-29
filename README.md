@@ -14,9 +14,9 @@ Just pull and run the Docker container:
                -e LDAP_URI=ldap://my.ldap.host:389 \
                mercury/hgi-registry
 
-Inside the container, the server runs from `127.0.0.1:5000`, by default,
-which you may map to the host however you like. The service otherwise
-takes its cues from the following environment variables:
+Inside the container, the service runs under `127.0.0.1:5000`, by
+default, which you may map to the host however you wish. The service
+otherwise takes its cues from the following environment variables:
 
 * `LDAP_URI` The URI of your LDAP server, consisting of the schema, host
   and port. This must be supplied.
@@ -107,7 +107,7 @@ Method | Content Type       | Behaviour
 
 #### Schema
 
-Array of person [hypermedia entites](#hypermedia), with their full names
+Array of person [hypermedia entities](#hypermedia), with their full names
 dereferenced.
 
 ### `/people/<USER_ID>`
@@ -127,7 +127,7 @@ Method | Content Type       | Behaviour
 * `active` Predicate of whether this is an active account;
 * `photo` [Hypermedia entity](#hypermedia) of person's photo, if they
   have one;
-* `involvement` Array of group [hypermedia entites](#hypermedia) for the
+* `involvement` Array of group [hypermedia entities](#hypermedia) for the
   groups in which the person is involved and their capacity therein,
   with said groups' POSIX group IDs dereferenced;
 * `last_updated` The timestamp of the last update for this record (in
@@ -142,7 +142,7 @@ Method | Content Type       | Behaviour
 ## Errors
 
 HTTP client and server errors are returned as a JSON object with the
-following schema:
+following entities:
 
 * `status` HTTP status code;
 * `reason` HTTP status reason;
