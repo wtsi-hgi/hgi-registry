@@ -18,18 +18,16 @@ Inside the container, the service runs under `127.0.0.1:5000`, by
 default, which you may map to the host however you wish. The service
 otherwise takes its cues from the following environment variables:
 
-* `LDAP_URI` The URI of your LDAP server, consisting of the schema, host
-  and port. This must be supplied.
+* `LDAP_URI` The URI of your LDAP server, consisting of the schema,
+  hostname and port. This must be supplied.
 
 * `EXPIRY` The duration (in seconds) before in-memory LDAP entities are
   refreshed from the LDAP server. This value is optional and defaults to
   3600 (i.e., one hour).
 
-* `API_HOST` The hostname that the service will run under. This value is
-  optional and defaults to `127.0.0.1`.
-
-* `API_PORT` The port that the service will run under. This value is
-  optional and defaults to `5000`.
+* `API_URI` The URI that the service will run under, consisting of the
+  schema (which must be `http://`), hostname and port. This value is
+  optional and defaults to `http://127.0.0.1:5000`.
 
 # RESTful API
 

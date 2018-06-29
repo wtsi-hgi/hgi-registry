@@ -19,6 +19,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import sys
+from urllib.parse import urlparse
 
 from common import time
 from common.logging import Level, log
@@ -36,9 +37,12 @@ if __name__ == "__main__":
 
     ldap = Server(os.environ["LDAP_URI"])
 
-    expiry = int(os.environ.get("EXPIRY", 3600))
-    registry = Registry(ldap, time.delta(seconds=expiry))
+    expiry = time.delta(seconds=int(os.environ.get("EXPIRY", 3600)))
+    registry = Registry(ldap, expiry)
 
-    host = os.environ.get("API_HOST", "127.0.0.1")
-    port = int(os.environ.get("API_PORT", 5000))
-    httpd.start(host, port, registry)
+    api_uri = urlparse(os.environ.get("API_URI", "http://127.0.0.1:5000"))
+    if not (api_uri.scheme == "http" and api_uri.hostname and api_uri.port):
+        log("Invalid value for API_URI environment variable", Level.Critical)
+        sys.exit(1)
+
+    httpd.start(api_uri.hostname, api_uri.port, registry)
