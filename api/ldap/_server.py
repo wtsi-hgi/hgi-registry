@@ -60,6 +60,7 @@ class Server(LDAPObject, ResultProcessor):
 
     def __init__(self, uri:str) -> None:
         self._server_uri = uri
+        log(f"Connecting to LDAP server at {uri}", Level.Info)
         super().__init__(uri)
 
     @property
@@ -92,8 +93,8 @@ class Server(LDAPObject, ResultProcessor):
             raise NoSuchDistinguishedName(f"Base DN {base} does not exist")
 
         except ldap.SERVER_DOWN:
-            log(f"Lost connection to {self._server_uri}", Level.Error)
-            raise CannotConnect(f"Cannot connect to {self._server_uri}")
+            log(f"Lost connection to {self.uri}", Level.Error)
+            raise CannotConnect(f"Cannot connect to {self.uri}")
 
 
 escape = escape_filter_chars
