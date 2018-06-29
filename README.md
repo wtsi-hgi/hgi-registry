@@ -12,23 +12,24 @@ Just pull and run the Docker container:
 
     docker run -dp 80:5000 \
                -e LDAP_URI=ldap://my.ldap.host:389 \
-               -e LDAP_BASE=dc=example,dc=com \
-               -e EXPIRY=86400 \
                mercury/hgi-registry
 
-Inside the container, the server runs on port 5000; you may map that to
-whatever host port you like. Additionally, the service takes its cues
-from three environment variables:
+Inside the container, the server runs from `127.0.0.1:5000`, by default,
+which you may map to the host however you like. The service otherwise
+takes its cues from the following environment variables:
 
 * `LDAP_URI` The URI of your LDAP server, consisting of the schema, host
-  and port.
-
-* `LDAP_BASE` The DN of the entry from which you'd like all searches to
-  be based.
+  and port. This must be supplied.
 
 * `EXPIRY` The duration (in seconds) before in-memory LDAP entities are
   refreshed from the LDAP server. This value is optional and defaults to
   3600 (i.e., one hour).
+
+* `API_HOST` The hostname that the service will run under. This value is
+  optional and defaults to `127.0.0.1`.
+
+* `API_PORT` The port that the service will run under. This value is
+  optional and defaults to `5000`.
 
 # RESTful API
 
@@ -48,6 +49,20 @@ with:
   link relation, respectively;
 * An optional `value` entity, that contains further semantic information
   about the link target, without the need for dereferencing.
+
+### Relations
+
+The following relations are used:
+
+Relation | Semantics
+:------- | :------------------------------------------------------------
+`self`   | Itself
+`group`  | Human Genetics Programme group
+`person` | Person, human or otherwise
+`member` | Member of a group
+`owner`  | Owner of a group
+`pi`     | Principal investigator of a group
+`photo`  | Photo of a person
 
 ## Endpoints
 
@@ -123,3 +138,12 @@ Method | Content Type       | Behaviour
 Method | Content Type       | Behaviour
 :----- | :----------------- | :-----------------------------------------
 `GET`  | `image/jpeg`       | Return the photo of the specific user given by `<USER_ID>` if it exists. If said user has no photo, then a 404 Not Found error will be returned.
+
+## Errors
+
+HTTP client and server errors are returned as a JSON object with the
+following schema:
+
+* `status` HTTP status code;
+* `reason` HTTP status reason;
+* `description` Description of the error
