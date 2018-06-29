@@ -215,9 +215,9 @@ def accept(*media_types:str) -> _HandlerDecoratorT:
                 raise error(406, f"Can only respond with {_pretty} media types")
 
             # Thread the parsed Accept header and the preferred response
-            # media type into the request for the handler to deal with
-            request["acceptable"] = acceptable
-            request["preferred"]  = acceptable.preferred(*available)
+            # media type into the request for downstream handlers
+            request.can_accept = acceptable.can_accept
+            request.preferred  = acceptable.preferred(*available)
             return await handler(request)
 
         return _decorated
