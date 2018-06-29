@@ -19,10 +19,9 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import json
 
-from aiohttp.web import HTTPError
-
 from common import types as T
 from common.logging import Level, log
+from ._types import HTTPException
 
 
 __all__ = ["BaseHTTPError", "error"]
@@ -38,7 +37,7 @@ _status_map:T.Dict[int, str] = {
     502: "Bad Gateway"
 }
 
-class BaseHTTPError(HTTPError):
+class BaseHTTPError(HTTPException):
     """ Standardised JSON error response """
     description:str
 

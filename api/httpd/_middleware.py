@@ -23,7 +23,7 @@ from functools import wraps, total_ordering
 from common import types as T
 from common.logging import Level, log
 from ._error import BaseHTTPError, error
-from ._types import Application, Request, Response, Handler
+from ._types import Application, Request, Response, Handler, HTTPException
 
 
 __all__ = ["catch500", "allow", "accept"]
@@ -41,6 +41,11 @@ async def catch500(_app:Application, handler:Handler) -> Handler:
             # Reraise and log known errors
             log(e.description, Level.Error)
             raise
+
+        except HTTPException as e:
+            # Convert and log framework errors
+            log(e.text, Level.Error)
+            raise error(e.status, e.text)
 
         except Exception as e:
             # Catch and log everything else as a 500 Internal Server Error
