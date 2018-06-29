@@ -55,7 +55,7 @@ class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
         return self._attr_map[attr](self._entity)
 
     async def __updator__(self) -> None:
-        log(f"Updating {self._identity}", Level.Debug)
+        log(f"Updating {self.identity}", Level.Debug)
         await self._entity.fetch()
 
     @classmethod
@@ -73,7 +73,7 @@ class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
 
     @property
     def dn(self) -> str:
-        return self.build_dn(self._identity)
+        return self.build_dn(self.identity)
 
     @property
     def identity(self) -> str:
@@ -84,7 +84,7 @@ class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
         Reattach an LDAP server to the node's entity, in the event of
         connection problems
         """
-        log(f"Attaching {self._identity} to {server._server_uri}", Level.Debug)
+        log(f"Attaching {self.identity} to {server.uri}", Level.Debug)
         self._entity.server = server
 
 
@@ -122,7 +122,7 @@ class BaseRegistry(Expirable, Serialisable, T.Container[BaseNode], metaclass=ABC
         Reattach an LDAP server to every node, in the event of
         connection problems
         """
-        log(f"Reattaching all nodes to {server._server_uri}", Level.Debug)
+        log(f"Reattaching all nodes to {server.uri}", Level.Debug)
         self._server = server
         for node in self._registry:
             self._registry[node].reattach_server(server)

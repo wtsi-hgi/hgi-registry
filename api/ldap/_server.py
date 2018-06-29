@@ -62,6 +62,10 @@ class Server(LDAPObject, ResultProcessor):
         self._server_uri = uri
         super().__init__(uri)
 
+    @property
+    def uri(self) -> str:
+        return self._server_uri
+
     async def search(self, base:str, scope:Scope, search:str = "(objectClass=*)", *,
                      attrs:T.Optional[T.List[str]] = None,
                      adaptor:T.Optional[_AdaptorT] = None) -> T.AsyncIterator[_AdaptedT]:
