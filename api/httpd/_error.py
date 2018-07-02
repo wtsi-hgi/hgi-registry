@@ -18,6 +18,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
 import json
+from http.server import BaseHTTPRequestHandler
 
 from common import types as T
 from common.logging import Level, log
@@ -29,12 +30,11 @@ __all__ = ["HTTPError"]
 
 _ENCODING = "utf-8"
 
+# Extract HTTP client/server error response reasons from stdlib
 _status_map:T.Dict[int, str] = {
-    404: "Not Found",
-    405: "Method Not Allowed",
-    406: "Not Acceptable",
-    500: "Internal Server Error",
-    502: "Bad Gateway"
+    status.value: description
+    for status, (description, _long_desc) in BaseHTTPRequestHandler.responses.items()
+    if 400 <= status.value < 600
 }
 
 class HTTPError(HTTPException):
