@@ -71,7 +71,7 @@ def allow(*methods:str) -> _HandlerDecoratorT:
         async def _decorated(request:Request) -> Response:
             """ Check request method against allowed methods """
             if request.method not in allowed:
-                raise error(405, f"Cannot {request.method} the resource at {request.url}.", headers=allow_header)
+                raise HTTPError(405, f"Cannot {request.method} the resource at {request.url}.", headers=allow_header)
 
             if request.method == "OPTIONS":
                 return Response(status=200, headers=allow_header)
@@ -215,7 +215,7 @@ def accept(*media_types:str) -> _HandlerDecoratorT:
 
             if not acceptable.can_accept(*available):
                 _pretty = " or".join(", ".join(available).rsplit(",", 1))
-                raise error(406, f"Can only respond with {_pretty} media types")
+                raise HTTPError(406, f"Can only respond with {_pretty} media types")
 
             # Thread the parsed Accept header and the preferred response
             # media type into the request for downstream handlers
