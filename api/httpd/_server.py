@@ -22,6 +22,7 @@ import asyncio
 from aiohttp.web import run_app
 
 from common.logging import Level, get_logger, log
+from api import __version__
 from api.models import Registry
 from . import _handlers as handler
 from ._middleware import error_handler
@@ -30,9 +31,10 @@ from ._types import Application, Request, Response
 
 __all__ = ["start"]
 
+async def _set_server_header(_request:Request, response:Response) -> None:
+    response.headers["Server"] = f"Human Genetics Programme Registry API Server {__version__}"
 
 async def _shutdown(app:Application) -> None:
-    """ Log when the API server is shutdown """
     log("Shutting down API server", Level.Info)
 
 
@@ -41,6 +43,7 @@ def start(host:str, port:int, registry:Registry) -> None:
     logger = get_logger()
 
     app = Application(logger=logger, middlewares=[error_handler])
+    app.on_response_prepare.append(_set_server_header)
     app.on_shutdown.append(_shutdown)
 
     app["registry"] = registry

@@ -23,13 +23,13 @@ from urllib.parse import urlparse
 
 from common import time
 from common.logging import Level, log
-from . import httpd
+from . import httpd, __version__
 from .ldap import Server
 from .models import Registry
 
 
 if __name__ == "__main__":
-    log("Human Genetics Programme Registry API Server", Level.Info)
+    log(f"Human Genetics Programme Registry API Server {__version__}", Level.Info)
 
     if "LDAP_URI" not in os.environ:
         log("LDAP_URI environment variable is not defined", Level.Critical)
