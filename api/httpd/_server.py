@@ -24,7 +24,7 @@ from aiohttp.web import run_app
 from common.logging import Level, get_logger, log
 from api.models import Registry
 from . import _handlers as handler
-from ._middleware import catch500
+from ._middleware import error_handler
 from ._types import Application, Request, Response
 
 
@@ -40,7 +40,7 @@ def start(host:str, port:int, registry:Registry) -> None:
     """ Start the API server """
     logger = get_logger()
 
-    app = Application(logger=logger, middlewares=[catch500])
+    app = Application(logger=logger, middlewares=[error_handler])
     app.on_shutdown.append(_shutdown)
 
     app["registry"] = registry

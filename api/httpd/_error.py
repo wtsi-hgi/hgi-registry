@@ -24,7 +24,7 @@ from common.logging import Level, log
 from ._types import HTTPException
 
 
-__all__ = ["BaseHTTPError", "error"]
+__all__ = ["HTTPError"]
 
 
 _ENCODING = "utf-8"
@@ -37,19 +37,27 @@ _status_map:T.Dict[int, str] = {
     502: "Bad Gateway"
 }
 
-class BaseHTTPError(HTTPException):
+class HTTPError(HTTPException):
     """ Standardised JSON error response """
-    description:str
+    _description:str
 
-    def __init__(self, description:str, headers:T.Optional[T.Dict[str, str]] = None) -> None:
+    def __init__(self, status_or_exception:T.Union[int, HTTPException], description:T.Optional[str] = None, headers:T.Optional[T.Dict[str, str]] = None) -> None:
+        # If an exception is passed, unpack it and rerun
+        if isinstance(status_or_exception, HTTPException):
+            e = status_or_exception
+            self.__init__(e.status_code, description or e.text, headers)
+            return
+
+        assert description is not None
+        self._description = description
+
+        self.status_code = status_or_exception
+
         try:
             reason = _status_map[self.status_code]
-
         except KeyError:
             log(f"HTTP {self.status_code} status is undefined", Level.Debug)
             reason = "Undefined Error"
-
-        self.description = description
 
         headers_with_content_type = {
             "Content-Type": f"application/json; charset={_ENCODING}",
@@ -59,15 +67,11 @@ class BaseHTTPError(HTTPException):
         body = json.dumps({
             "status":      self.status_code,
             "reason":      reason,
-            "description": description
+            "description": self.description
         }).encode(_ENCODING)
 
         super().__init__(headers=headers_with_content_type, reason=reason, body=body)
 
-
-def error(status:int, description:str, *, headers:T.Optional[T.Dict[str, str]] = None) -> BaseHTTPError:
-    """ Error factory """
-    class _HTTPError(BaseHTTPError):
-        status_code = status
-
-    return _HTTPError(description, headers)
+    @property
+    def description(self) -> str:
+        return self._description

@@ -22,36 +22,34 @@ from functools import wraps, total_ordering
 
 from common import types as T
 from common.logging import Level, log
-from ._error import BaseHTTPError, error
+from ._error import HTTPError
 from ._types import Application, Request, Response, Handler, HTTPException
 
 
-__all__ = ["catch500", "allow", "accept"]
+__all__ = ["error_handler", "allow", "accept"]
 
 _HandlerDecoratorT = T.Callable[[Handler], Handler]
 
 
-async def catch500(_app:Application, handler:Handler) -> Handler:
+async def error_handler(_app:Application, handler:Handler) -> Handler:
     """ Internal Server Error catch-all """
     async def _middleware(request:Request) -> Response:
         try:
             return await handler(request)
 
-        except BaseHTTPError as e:
-            # Reraise and log known errors
-            log(e.description, Level.Error)
-            raise
+        except (HTTPError, HTTPException) as e:
+            # Reraise and log HTTP errors
+            if not isinstance(e, HTTPError):
+                e = HTTPError(e)
 
-        except HTTPException as e:
-            # Convert and log framework errors
-            log(e.text, Level.Error)
-            raise error(e.status, e.text)
+            log(e.description, Level.Error)
+            raise e
 
         except Exception as e:
             # Catch and log everything else as a 500 Internal Server Error
             message = str(e)
             log(message, Level.Error)
-            raise error(500, message)
+            raise HTTPError(500, message)
 
     return _middleware
 
