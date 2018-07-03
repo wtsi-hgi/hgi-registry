@@ -37,9 +37,11 @@ async def error_handler(_app:Application, handler:Handler) -> Handler:
         try:
             return await handler(request)
 
-        except (HTTPError, HTTPException) as e:
+        except HTTPException as e:
             # Reraise and log HTTP errors
             if not isinstance(e, HTTPError):
+                # Framework errors (e.g., 404) will not be our own
+                # HTTPError, so we convert it into one for consistency
                 e = HTTPError(e)
 
             log(e.description, Level.Error)
