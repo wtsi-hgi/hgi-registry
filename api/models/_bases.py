@@ -39,6 +39,8 @@ class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
     _entity:ldap.Entity
     _attr_map:T.Dict[str, Attribute]
 
+    _update_lock:Lock
+
     def __init__(self, identity:str, server:ldap.Server, attr_map:T.Dict[str, Attribute], shelf_life:T.TimeDelta) -> None:
         super().__init__(shelf_life)
 
@@ -48,6 +50,8 @@ class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
 
         self._attr_map = attr_map
 
+        self._update_lock = Lock()
+
     def __getattr__(self, attr:str) -> T.Any:
         if attr not in self._attr_map:
             raise AttributeError(f"No such attribute {attr}!")
@@ -55,8 +59,9 @@ class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
         return self._attr_map[attr](self._entity)
 
     async def __updator__(self) -> None:
-        log(f"Updating {self.identity}", Level.Debug)
-        await self._entity.fetch()
+        async with self._update_lock:
+            log(f"Updating {self.identity}", Level.Debug)
+            await self._entity.fetch()
 
     @classmethod
     def extract_rdn(cls, dn:str) -> str:
