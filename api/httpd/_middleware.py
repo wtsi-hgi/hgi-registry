@@ -23,12 +23,10 @@ from functools import wraps, total_ordering
 from common import types as T
 from common.logging import Level, log
 from ._error import HTTPError
-from ._types import Application, Request, Response, Handler, HTTPException
+from ._types import Application, Request, Response, Handler, HandlerDecorator, HTTPException
 
 
 __all__ = ["error_handler", "allow", "accept"]
-
-_HandlerDecoratorT = T.Callable[[Handler], Handler]
 
 
 async def error_handler(_app:Application, handler:Handler) -> Handler:
@@ -56,7 +54,7 @@ async def error_handler(_app:Application, handler:Handler) -> Handler:
     return _middleware
 
 
-def allow(*methods:str) -> _HandlerDecoratorT:
+def allow(*methods:str) -> HandlerDecorator:
     """
     Parametrisable handler decorator which checks the request method
     matches what's allowed (raising an error, if not) and responds
@@ -196,7 +194,7 @@ class _AcceptParser(object):
                 if r.in_range(m):
                     return m
 
-def accept(*media_types:str) -> _HandlerDecoratorT:
+def accept(*media_types:str) -> HandlerDecorator:
     """
     Parametrisable handler decorator which checks the requested 
     acceptable media types can be fulfilled (raising an error, if not)

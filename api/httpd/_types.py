@@ -21,3 +21,4 @@ from aiohttp.web import Application, Request, Response, HTTPException
 from common import types as T
 
 Handler = T.Callable[[Request], Response]
+HandlerDecorator = T.Callable[[Handler], Handler]
