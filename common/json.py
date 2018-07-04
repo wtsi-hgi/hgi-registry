@@ -23,6 +23,25 @@ from .constants import ENCODING
 from . import time, types as T
 
 
+__all__ = ["encode"]
+
+
+class _JSONEncoder(json.JSONEncoder):
+    """ JSON encoder that understands all our types """
+    _encoders:T.ClassVar[T.List[json.JSONEncoder]] = [
+        time.JSONEncoder()
+    ]
+
+    def default(self, obj:T.Any) -> T.Any:
+        for encoder in _JSONEncoder._encoders:
+            try:
+                return encoder.default(obj)
+
+            except TypeError:
+                pass
+
+        super().default(obj)
+
 def encode(data:T.Any) -> bytes:
     """ Standard JSON encoding """
-    return json.dumps(data, cls=time.JSONEncoder).encode(ENCODING)
+    return json.dumps(data, cls=_JSONEncoder).encode(ENCODING)
