@@ -40,7 +40,7 @@ if __name__ == "__main__":
     expiry = time.delta(seconds=int(os.environ.get("EXPIRY", 3600)))
     registry = Registry(ldap, expiry)
 
-    api_uri = urlparse(os.environ.get("API_URI", "http://127.0.0.1:5000"))
+    api_uri = urlparse(os.environ.get("API_URI", "http://0.0.0.0:5000"))
     if not (api_uri.scheme == "http" and api_uri.hostname and api_uri.port):
         log("Invalid value for API_URI environment variable", Level.Critical)
         sys.exit(1)

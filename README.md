@@ -14,7 +14,7 @@ Just pull and run the Docker container:
                -e LDAP_URI=ldap://my.ldap.host:389 \
                mercury/hgi-registry
 
-Inside the container, the service runs under `127.0.0.1:5000`, by
+Inside the container, the service runs under `0.0.0.0:5000`, by
 default, which you may map to the host however you wish. The service
 otherwise takes its cues from the following environment variables:
 
@@ -27,7 +27,7 @@ otherwise takes its cues from the following environment variables:
 
 * `API_URI` The URI that the service will run under, consisting of the
   schema (which must be `http://`), hostname and port. This value is
-  optional and defaults to `http://127.0.0.1:5000`.
+  optional and defaults to `http://0.0.0.0:5000`.
 
 # RESTful API
 
