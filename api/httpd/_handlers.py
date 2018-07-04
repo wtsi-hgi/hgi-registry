@@ -23,6 +23,7 @@ from functools import wraps
 
 from api.ldap import CannotConnect, Server
 from api.models import Registry, Person, Group
+from common import types as T
 from common.logging import Level, log
 from ._error import HTTPError
 from ._middleware import allow, accept
@@ -37,7 +38,7 @@ _ENCODING = "utf-8"
 _MAX_RETRY = 3
 
 
-def reconnect(max_attempts:int = 1) -> HandlerDecorator:
+def _reconnect(max_attempts:int = 1) -> HandlerDecorator:
     """
     Parametrisable handler decorator that will reattempt to run the
     handler a set number of times while, in the event of a connection
@@ -86,16 +87,20 @@ async def _get_registry(req:Request) -> Registry:
     return registry
 
 
-_index_body = json.dumps({
+def _JSONResponse(body:T.Any, *, status:int = 200) -> Response:
+    """ Standardised Response factory for JSON payloads """
+    return Response(status=status, content_type=_JSON, charset=_ENCODING,
+                    body=json.dumps(body).encode(_ENCODING))
+
+
+_index = _JSONResponse({
     "groups": { "href": "/groups", "rel": "items" },
     "people": { "href": "/people", "rel": "items" }
-}).encode(_ENCODING)
-
-_index = Response(status=200, content_type=_JSON, charset=_ENCODING, body=_index_body)
+})
 
 @allow("GET")
 @accept(_JSON)
-@reconnect(_MAX_RETRY)
+@_reconnect(_MAX_RETRY)
 async def registry(req:Request) -> Response:
     # Static index (undocumented endpoint, just for completeness)
     return _index
@@ -103,14 +108,14 @@ async def registry(req:Request) -> Response:
 
 @allow("GET")
 @accept(_JSON)
-@reconnect(_MAX_RETRY)
+@_reconnect(_MAX_RETRY)
 async def people(req:Request) -> Response:
     raise NotImplementedError("Not yet implemented")
 
 
 @allow("GET")
 @accept(_JSON)
-@reconnect(_MAX_RETRY)
+@_reconnect(_MAX_RETRY)
 async def person(req:Request) -> Response:
     identity = req.match_info['id']
     raise NotImplementedError(f"Not yet implemented; ID {identity}")
@@ -118,7 +123,7 @@ async def person(req:Request) -> Response:
 
 @allow("GET")
 @accept(_JPEG)
-@reconnect(_MAX_RETRY)
+@_reconnect(_MAX_RETRY)
 async def photo(req:Request) -> Response:
     identity = req.match_info['id']
     raise NotImplementedError(f"Not yet implemented; ID {identity}")
@@ -126,14 +131,14 @@ async def photo(req:Request) -> Response:
 
 @allow("GET")
 @accept(_JSON)
-@reconnect(_MAX_RETRY)
+@_reconnect(_MAX_RETRY)
 async def groups(req:Request) -> Response:
     raise NotImplementedError("Not yet implemented")
 
 
 @allow("GET")
 @accept(_JSON)
-@reconnect(_MAX_RETRY)
+@_reconnect(_MAX_RETRY)
 async def group(req:Request) -> Response:
     identity = req.match_info['id']
     raise NotImplementedError(f"Not yet implemented; ID {identity}")
