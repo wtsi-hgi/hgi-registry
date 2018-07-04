@@ -58,18 +58,19 @@ def reconnect(max_attempts:int = 1) -> HandlerDecorator:
                     return await handler(req)
 
                 except CannotConnect:
-                    log(f"Attempting to reconnect to LDAP server at {ldap_server}", Level.Debug)
-
                     attempt -= 1
                     if not attempt:
                         # Bad gateway
                         raise HTTPError(502, f"Cannot establish a connection with LDAP server at {ldap_server}")
 
                     # Otherwise, sleep for a bit, then try reconnecting
+                    log(f"Will attempt to reconnect to LDAP server at {ldap_server} in {sleep_for} seconds...", Level.Debug)
                     await asyncio.sleep(sleep_for)
-                    sleep_for *= 2 # Exponential back-off
                     ldap = Server(ldap_server)
                     registry.server = ldap
+
+                    # Exponential back-off
+                    sleep_for *= 2
 
         return _decorated
 

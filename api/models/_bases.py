@@ -18,9 +18,10 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from abc import ABCMeta
-from asyncio import Lock
 from collections import defaultdict
+import asyncio
 import re
+import threading
 
 from api import ldap
 from common import types as T, time
@@ -39,7 +40,8 @@ class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
     _entity:ldap.Entity
     _attr_map:T.Dict[str, Attribute]
 
-    _update_lock:Lock
+    _update_lock:asyncio.Lock
+    _reattach_lock:threading.Lock
 
     def __init__(self, identity:str, server:ldap.Server, attr_map:T.Dict[str, Attribute], shelf_life:T.TimeDelta) -> None:
         super().__init__(shelf_life)
@@ -50,7 +52,8 @@ class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
 
         self._attr_map = attr_map
 
-        self._update_lock = Lock()
+        self._update_lock = asyncio.Lock()
+        self._reattach_lock = threading.Lock()
 
     def __getattr__(self, attr:str) -> T.Any:
         if attr not in self._attr_map:
@@ -89,9 +92,10 @@ class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
         Reattach an LDAP server to the node's entity, in the event of
         connection problems and forcibly expire the node
         """
-        log(f"Attaching {self.identity} to {server.uri}", Level.Debug)
-        self._entity.server = server
-        self.expire()
+        with self._reattach_lock:
+            log(f"Attaching {self.identity} to {server.uri}", Level.Debug)
+            self._entity.server = server
+            self.expire()
 
 
 class NoMatches(BaseException):
@@ -102,7 +106,8 @@ class BaseRegistry(Expirable, Serialisable, T.Container[BaseNode], metaclass=ABC
     _server:ldap.Server
     _registry:T.Dict[str, BaseNode]
 
-    _seed_lock:T.DefaultDict[T.Type[BaseNode], Lock]
+    _seed_lock:T.DefaultDict[T.Type[BaseNode], asyncio.Lock]
+    _reattach_lock:threading.Lock
 
     def __init__(self, server:ldap.Server, shelf_life:T.TimeDelta) -> None:
         self._server = server
@@ -111,7 +116,8 @@ class BaseRegistry(Expirable, Serialisable, T.Container[BaseNode], metaclass=ABC
         # Create seeding lock for the given class, if it doesn't exist.
         # We reasonably assume that the data fetched for each node class
         # is mutually exclusive.
-        self._seed_lock = defaultdict(Lock)
+        self._seed_lock = defaultdict(asyncio.Lock)
+        self._reattach_lock = threading.Lock()
 
         super().__init__(shelf_life)
 
@@ -128,11 +134,12 @@ class BaseRegistry(Expirable, Serialisable, T.Container[BaseNode], metaclass=ABC
         Reattach an LDAP server to every node, in the event of
         connection problems and forcibly expire the registry
         """
-        log(f"Reattaching all nodes to {server.uri}", Level.Debug)
-        self._server = server
-        self.expire()
-        for node in self._registry:
-            self._registry[node].reattach_server(server)
+        with self._reattach_lock:
+            log(f"Reattaching all nodes to {server.uri}", Level.Debug)
+            self._server = server
+            self.expire()
+            for node in self._registry:
+                self._registry[node].reattach_server(server)
 
     async def seed(self, cls:T.Type[BaseNode], search:T.Optional[str] = None) -> None:
         """
