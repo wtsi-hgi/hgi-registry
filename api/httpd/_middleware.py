@@ -47,7 +47,7 @@ async def error_handler(_app:Application, handler:Handler) -> Handler:
 
         except Exception as e:
             # Catch and log everything else as a 500 Internal Server Error
-            message = str(e)
+            message = f"{e.__class__.__name__}: {e}"
             log(message, Level.Error)
             raise HTTPError(500, message)
 
