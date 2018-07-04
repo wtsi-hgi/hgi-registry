@@ -21,6 +21,7 @@ import re
 from functools import wraps, total_ordering
 
 from common import types as T
+from common.constants import MIMEType
 from common.logging import Level, log
 from ._error import HTTPError
 from ._types import Application, Request, Response, Handler, HandlerDecorator, HTTPException
@@ -172,14 +173,14 @@ class _AcceptParser(object):
         # ordering (based on the input string) is preserved
         self.media_ranges = sorted(_ranges)
 
-    def can_accept(self, *media_types:str) -> bool:
+    def can_accept(self, *media_types:MIMEType) -> bool:
         """
         Check any of the specified media types fulfil those deemed
         acceptable by the client
         """
-        return any(r.in_range(m) for m in media_types for r in self.media_ranges)
+        return any(r.in_range(m.value) for m in media_types for r in self.media_ranges)
 
-    def preferred(self, *media_types:str) -> str:
+    def preferred(self, *media_types:MIMEType) -> MIMEType:
         """
         Determine the most preferred media type from those specified, as
         deemed by the client. In case of a tie, the order in which the
@@ -191,16 +192,16 @@ class _AcceptParser(object):
         """
         for r in self.media_ranges:
             for m in media_types:
-                if r.in_range(m):
+                if r.in_range(m.value):
                     return m
 
-def accept(*media_types:str) -> HandlerDecorator:
+def accept(*media_types:MIMEType) -> HandlerDecorator:
     """
     Parametrisable handler decorator which checks the requested 
     acceptable media types can be fulfilled (raising an error, if not)
     """
     # Available media types
-    if not media_types or any(not RE_MEDIA_TYPE.match(m) for m in media_types):
+    if not media_types or any(not RE_MEDIA_TYPE.match(m.value) for m in media_types):
         raise TypeError("You must specify fully-qualified media type(s)")
 
     available = tuple(set(media_types))

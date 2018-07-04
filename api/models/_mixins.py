@@ -18,9 +18,8 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from abc import ABCMeta, abstractmethod
-import json
 
-from common import types as T, time
+from common import types as T, time, json
 
 
 class Expirable(metaclass=ABCMeta):
@@ -65,10 +64,10 @@ class Expirable(metaclass=ABCMeta):
 class Serialisable(metaclass=ABCMeta):
     """ Base class for JSON-serialisable objects """
     @property
-    async def json(self) -> str:
+    async def json(self) -> bytes:
         """ Return the JSON serialisation of the object's serialisable form """
         serialisable = await self.__serialisable__()
-        return json.dumps(serialisable, cls=time.JSONEncoder)
+        return json.encode(serialisable)
 
     @abstractmethod
     async def __serialisable__(self) -> T.Any:

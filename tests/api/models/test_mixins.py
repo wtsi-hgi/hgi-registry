@@ -76,7 +76,7 @@ class TestSerialisable(unittest.TestCase):
     async def test_json_serialisation(self):
         serialisable = DummySerialisable()
         json = await serialisable.json
-        self.assertEqual(json, "\"foo\"")
+        self.assertEqual(json, b"\"foo\"")
 
 
 class DummyHypermedia(m.Hypermedia):

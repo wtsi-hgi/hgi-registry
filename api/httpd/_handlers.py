@@ -18,25 +18,19 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
 import asyncio
-import json
 from functools import wraps
 
 from api.ldap import CannotConnect, Server
 from api.models import Registry, Person, Group
-from common import types as T, time
+from common import types as T, json
+from common.constants import ENCODING, MIMEType
 from common.logging import Level, log
 from ._error import HTTPError
 from ._middleware import allow, accept
 from ._types import Request, Response, Handler, HandlerDecorator
 
 
-_JSON = "application/json"
-_JPEG = "image/jpeg"
-
-_ENCODING = "utf-8"
-
 _MAX_RETRY = 3
-
 
 def _reconnect(max_attempts:int = 1) -> HandlerDecorator:
     """
@@ -89,12 +83,12 @@ async def _get_registry(req:Request) -> Registry:
 
 def _JSONResponse(body:T.Any, *, serialise:bool = True, status:int = 200) -> Response:
     """ Standardised Response factory for JSON payloads """
-    return Response(status=status, content_type=_JSON, charset=_ENCODING,
-                    body=json.dumps(body, cls=time.JSONEncoder).encode(_ENCODING) if serialise else body)
+    return Response(status=status, content_type=MIMEType.JSON.value, charset=ENCODING,
+                    body=json.encode(body) if serialise else body)
 
 
 @allow("GET")
-@accept(_JSON)
+@accept(MIMEType.JSON)
 @_reconnect(_MAX_RETRY)
 async def registry(req:Request) -> Response:
     # Index (undocumented endpoint, just for completeness)
@@ -107,7 +101,7 @@ async def registry(req:Request) -> Response:
 
 
 @allow("GET")
-@accept(_JSON)
+@accept(MIMEType.JSON)
 @_reconnect(_MAX_RETRY)
 async def people(req:Request) -> Response:
     registry = await _get_registry(req)
@@ -115,7 +109,7 @@ async def people(req:Request) -> Response:
 
 
 @allow("GET")
-@accept(_JSON)
+@accept(MIMEType.JSON)
 @_reconnect(_MAX_RETRY)
 async def person(req:Request) -> Response:
     identity = req.match_info['id']
@@ -123,7 +117,7 @@ async def person(req:Request) -> Response:
 
 
 @allow("GET")
-@accept(_JPEG)
+@accept(MIMEType.JPEG)
 @_reconnect(_MAX_RETRY)
 async def photo(req:Request) -> Response:
     identity = req.match_info['id']
@@ -131,7 +125,7 @@ async def photo(req:Request) -> Response:
 
 
 @allow("GET")
-@accept(_JSON)
+@accept(MIMEType.JSON)
 @_reconnect(_MAX_RETRY)
 async def groups(req:Request) -> Response:
     registry = await _get_registry(req)
@@ -139,7 +133,7 @@ async def groups(req:Request) -> Response:
 
 
 @allow("GET")
-@accept(_JSON)
+@accept(MIMEType.JSON)
 @_reconnect(_MAX_RETRY)
 async def group(req:Request) -> Response:
     identity = req.match_info['id']

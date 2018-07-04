@@ -17,18 +17,16 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
-import json
 from http.server import BaseHTTPRequestHandler
 
-from common import types as T
+from common import types as T, json
+from common.constants import ENCODING, MIMEType
 from common.logging import Level, log
 from ._types import HTTPException
 
 
 __all__ = ["HTTPError"]
 
-
-_ENCODING = "utf-8"
 
 # Extract HTTP client/server error response reasons from stdlib
 _status_map:T.Dict[int, str] = {
@@ -60,15 +58,15 @@ class HTTPError(HTTPException):
             reason = "Undefined Error"
 
         headers_with_content_type = {
-            "Content-Type": f"application/json; charset={_ENCODING}",
+            "Content-Type": f"{MIMEType.JSON.value}; charset={ENCODING}",
             **(headers or {})
         }
 
-        body = json.dumps({
+        body = json.encode({
             "status":      self.status_code,
             "reason":      reason,
             "description": self.description
-        }).encode(_ENCODING)
+        })
 
         super().__init__(headers=headers_with_content_type, reason=reason, body=body)
 
