@@ -78,6 +78,7 @@ class Serialisable(metaclass=ABCMeta):
 class Hypermedia(metaclass=ABCMeta):
     """ Base class for hypermedia references """
     _base_uri:T.ClassVar[str]
+    _relation:T.ClassVar[str]
 
     @property
     @abstractmethod

@@ -35,6 +35,7 @@ class Person(BaseNode):
     _object_classes = ["posixAccount"]
 
     _base_uri = "/people"
+    _relation = "person"
 
     _registry:BaseRegistry
 
@@ -116,6 +117,7 @@ class Group(BaseNode):
     _object_classes = ["posixGroup", "sangerHumgenProjectGroup"]
 
     _base_uri = "/groups"
+    _relation = "group"
 
     _registry:BaseRegistry
 
@@ -227,15 +229,18 @@ class Registry(BaseRegistry):
         for cls in Person, Group:
             await self.seed(cls)
 
+    async def all(self, cls:T.Type[BaseNode]) -> T.List:
+        """ List of hypermedia entities of a specific type """
+        entities = []
+        for identity in self.keys(cls):
+            entity = await self.get(cls, identity)
+            entities.append(cls.href(entity, rel=cls._relation, value=entity.name))
+
+        return entities
+
     async def __serialisable__(self) -> T.Any:
-        groups = []
-        for gid in self.keys(Group):
-            group = await self.get(Group, gid)
-            groups.append(Group.href(group, rel="group", value=group.name))
-
-        people = []
-        for uid in self.keys(Person):
-            person = await self.get(Person, uid)
-            people.append(Person.href(person, rel="person", value=person.name))
-
-        return {"last_updated": self.last_updated, "groups": groups, "people": people}
+        return {
+            "last_updated": self.last_updated,
+            "groups":       await self.all(Group),
+            "people":       await self.all(Person)
+        }
