@@ -23,7 +23,7 @@ from functools import wraps
 
 from api.ldap import CannotConnect, Server
 from api.models import Registry, Person, Group
-from common import types as T
+from common import types as T, time
 from common.logging import Level, log
 from ._error import HTTPError
 from ._middleware import allow, accept
@@ -87,29 +87,31 @@ async def _get_registry(req:Request) -> Registry:
     return registry
 
 
-def _JSONResponse(body:T.Any, *, status:int = 200) -> Response:
+def _JSONResponse(body:T.Any, *, serialise:bool = True, status:int = 200) -> Response:
     """ Standardised Response factory for JSON payloads """
     return Response(status=status, content_type=_JSON, charset=_ENCODING,
-                    body=json.dumps(body).encode(_ENCODING))
+                    body=json.dumps(body, cls=time.JSONEncoder).encode(_ENCODING) if serialise else body)
 
-
-_index = _JSONResponse({
-    "groups": { "href": "/groups", "rel": "items" },
-    "people": { "href": "/people", "rel": "items" }
-})
 
 @allow("GET")
 @accept(_JSON)
+@_reconnect(_MAX_RETRY)
 async def registry(req:Request) -> Response:
-    # Static index (undocumented endpoint, just for completeness)
-    return _index
+    # Index (undocumented endpoint, just for completeness)
+    registry = await _get_registry(req)
+    return _JSONResponse({
+        "last_updated": registry.last_updated,
+        "groups":       { "href": "/groups", "rel": "items" },
+        "people":       { "href": "/people", "rel": "items" }
+    })
 
 
 @allow("GET")
 @accept(_JSON)
 @_reconnect(_MAX_RETRY)
 async def people(req:Request) -> Response:
-    raise NotImplementedError("Not yet implemented")
+    registry = await _get_registry(req)
+    return _JSONResponse(await registry.all(Person))
 
 
 @allow("GET")
@@ -132,7 +134,8 @@ async def photo(req:Request) -> Response:
 @accept(_JSON)
 @_reconnect(_MAX_RETRY)
 async def groups(req:Request) -> Response:
-    raise NotImplementedError("Not yet implemented")
+    registry = await _get_registry(req)
+    return _JSONResponse(await registry.all(Group))
 
 
 @allow("GET")
