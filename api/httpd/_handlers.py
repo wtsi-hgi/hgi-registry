@@ -21,7 +21,7 @@ import asyncio
 from functools import wraps
 
 from api.ldap import CannotConnect, Server
-from api.models import Registry, Person, Group
+from api.models import Registry, Person, Group, NoMatches
 from common import types as T, json
 from common.constants import ENCODING, MIMEType
 from common.logging import Level, log
@@ -81,6 +81,19 @@ async def _get_registry(req:Request) -> Registry:
     return registry
 
 
+_EntityT = T.TypeVar("_EntityT", Person, Group)
+
+async def _get_entity(cls:T.Type[_EntityT], req:Request) -> _EntityT:
+    registry = await _get_registry(req)
+    identity = req.match_info["id"]
+
+    try:
+        return await registry.get(cls, identity)
+
+    except NoMatches:
+        raise HTTPError(404, f"No such {cls.__name__} with ID {identity}")
+
+
 def _JSONResponse(body:T.Any, *, serialise:bool = True, status:int = 200) -> Response:
     """ Standardised Response factory for JSON payloads """
     return Response(status=status, content_type=MIMEType.JSON.value, charset=ENCODING,
@@ -112,16 +125,20 @@ async def people(req:Request) -> Response:
 @accept(MIMEType.JSON)
 @_reconnect(_MAX_RETRY)
 async def person(req:Request) -> Response:
-    identity = req.match_info['id']
-    raise NotImplementedError(f"Not yet implemented; ID {identity}")
+    person = await _get_entity(Person, req)
+    return _JSONResponse(await person.json, serialise=False)
 
 
 @allow("GET")
 @accept(MIMEType.JPEG)
 @_reconnect(_MAX_RETRY)
 async def photo(req:Request) -> Response:
-    identity = req.match_info['id']
-    raise NotImplementedError(f"Not yet implemented; ID {identity}")
+    person = await _get_entity(Person, req)
+
+    if person.photo is None:
+        raise HTTPError(404, f"No photo available for {person.name} ({person.id})")
+
+    return Response(status=200, content_type=MIMEType.JPEG.value, body=person.photo)
 
 
 @allow("GET")
@@ -136,5 +153,5 @@ async def groups(req:Request) -> Response:
 @accept(MIMEType.JSON)
 @_reconnect(_MAX_RETRY)
 async def group(req:Request) -> Response:
-    identity = req.match_info['id']
-    raise NotImplementedError(f"Not yet implemented; ID {identity}")
+    group = await _get_entity(Group, req)
+    return _JSONResponse(await group.json, serialise=False)
