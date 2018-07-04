@@ -229,7 +229,7 @@ class Registry(BaseRegistry):
         for cls in Person, Group:
             await self.seed(cls)
 
-    async def all(self, cls:T.Type[BaseNode]) -> T.List:
+    async def all_links(self, cls:T.Type[BaseNode]) -> T.List:
         """ List of hypermedia entities of a specific type """
         entities = []
         for identity in self.keys(cls):
@@ -241,6 +241,6 @@ class Registry(BaseRegistry):
     async def __serialisable__(self) -> T.Any:
         return {
             "last_updated": self.last_updated,
-            "groups":       await self.all(Group),
-            "people":       await self.all(Person)
+            "groups":       await self.all_links(Group),
+            "people":       await self.all_links(Person)
         }

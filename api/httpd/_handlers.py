@@ -105,7 +105,7 @@ async def registry(req:Request) -> Response:
 @_reconnect(_MAX_RETRY)
 async def people(req:Request) -> Response:
     registry = await _get_registry(req)
-    return _JSONResponse(await registry.all(Person))
+    return _JSONResponse(await registry.all_links(Person))
 
 
 @allow("GET")
@@ -129,7 +129,7 @@ async def photo(req:Request) -> Response:
 @_reconnect(_MAX_RETRY)
 async def groups(req:Request) -> Response:
     registry = await _get_registry(req)
-    return _JSONResponse(await registry.all(Group))
+    return _JSONResponse(await registry.all_links(Group))
 
 
 @allow("GET")
