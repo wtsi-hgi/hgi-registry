@@ -100,7 +100,6 @@ _index = _JSONResponse({
 
 @allow("GET")
 @accept(_JSON)
-@_reconnect(_MAX_RETRY)
 async def registry(req:Request) -> Response:
     # Static index (undocumented endpoint, just for completeness)
     return _index
