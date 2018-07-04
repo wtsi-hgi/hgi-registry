@@ -57,6 +57,10 @@ class Expirable(metaclass=ABCMeta):
         self._last_updated = time.now()
         await self.__updator__()
 
+    def expire(self) -> None:
+        """ Forcibly expire """
+        self._last_updated = None
+
 
 class Serialisable(metaclass=ABCMeta):
     """ Base class for JSON-serialisable objects """

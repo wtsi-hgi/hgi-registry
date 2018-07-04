@@ -87,10 +87,11 @@ class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
     def reattach_server(self, server:ldap.Server) -> None:
         """
         Reattach an LDAP server to the node's entity, in the event of
-        connection problems
+        connection problems and forcibly expire the node
         """
         log(f"Attaching {self.identity} to {server.uri}", Level.Debug)
         self._entity.server = server
+        self.expire()
 
 
 class NoMatches(BaseException):
@@ -125,10 +126,11 @@ class BaseRegistry(Expirable, Serialisable, T.Container[BaseNode], metaclass=ABC
     def server(self, server:ldap.Server) -> None:
         """
         Reattach an LDAP server to every node, in the event of
-        connection problems
+        connection problems and forcibly expire the registry
         """
         log(f"Reattaching all nodes to {server.uri}", Level.Debug)
         self._server = server
+        self.expire()
         for node in self._registry:
             self._registry[node].reattach_server(server)
 
