@@ -93,7 +93,7 @@ class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
         connection problems and forcibly expire the node
         """
         with self._reattach_lock:
-            log(f"Attaching {self.identity} to {server.uri}", Level.Debug)
+            log(f"Reattaching {self.identity} to {server.uri}", Level.Debug)
             self._entity.server = server
             self.expire()
 
