@@ -17,8 +17,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
-import base64
-
 from api import ldap
 from common import types as T
 from common.logging import Level, log
@@ -41,13 +39,11 @@ class Person(BaseNode):
 
     @staticmethod
     def decode_photo(jpegPhoto) -> T.Optional[bytes]:
-        """ Adaptor that returns the decoded JPEG data, if it exists """
+        """ Adaptor that returns the JPEG data, if it exists """
         if jpegPhoto is None:
             return None
 
-        # TODO? Return an async generator instead; is that overkill?
-        jpeg, *_ = map(base64.b64decode, jpegPhoto)
-        return jpeg
+        return jpegPhoto[0]
 
     @staticmethod
     def is_human(sangerAgressoCurrentPerson) -> bool:

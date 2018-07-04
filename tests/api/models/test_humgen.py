@@ -18,7 +18,6 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
 import unittest
-import base64
 
 from api.models import _humgen as h
 
@@ -27,7 +26,7 @@ class TestPerson(unittest.TestCase):
     def test_decode_photo(self):
         photo = b"abc123"
         self.assertIsNone(h.Person.decode_photo(None))
-        self.assertEqual(h.Person.decode_photo([base64.b64encode(photo)]), photo)
+        self.assertEqual(h.Person.decode_photo([photo]), photo)
 
     def test_is_human(self):
         self.assertFalse(h.Person.is_human(None))
