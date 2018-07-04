@@ -55,6 +55,7 @@ The following relations are used:
 Relation | Semantics
 :------- | :------------------------------------------------------------
 `self`   | Itself
+`items`  | Subordinate entries
 `group`  | Human Genetics Programme group
 `person` | Person, human or otherwise
 `member` | Member of a group
