@@ -53,12 +53,8 @@ class Expirable(metaclass=ABCMeta):
         return self._last_updated
 
     async def update(self) -> None:
-        self._last_updated = time.now()
         await self.__updator__()
-
-    def expire(self) -> None:
-        """ Forcibly expire """
-        self._last_updated = None
+        self._last_updated = time.now()
 
 
 class Serialisable(metaclass=ABCMeta):

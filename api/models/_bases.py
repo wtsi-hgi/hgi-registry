@@ -95,7 +95,6 @@ class BaseNode(Expirable, Serialisable, Hypermedia, metaclass=ABCMeta):
         with self._reattach_lock:
             log(f"Reattaching {self.identity} to {server.uri}", Level.Debug)
             self._entity.server = server
-            self.expire()
 
 
 class NoMatches(BaseException):
@@ -137,7 +136,6 @@ class BaseRegistry(Expirable, Serialisable, T.Container[BaseNode], metaclass=ABC
         with self._reattach_lock:
             log(f"Reattaching all nodes to {server.uri}", Level.Debug)
             self._server = server
-            self.expire()
             for node in self._registry:
                 self._registry[node].reattach_server(server)
 
