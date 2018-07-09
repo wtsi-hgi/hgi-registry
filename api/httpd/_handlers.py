@@ -91,7 +91,7 @@ async def _get_entity(cls:T.Type[_EntityT], req:Request) -> _EntityT:
         return await registry.get(cls, identity)
 
     except NoMatches:
-        raise HTTPError(404, f"No such {cls.__name__} with ID {identity}")
+        raise HTTPError(404, f"No such {cls._relation} with ID {identity}")
 
 
 def _JSONResponse(body:T.Any, *, serialise:bool = True, status:int = 200) -> Response:

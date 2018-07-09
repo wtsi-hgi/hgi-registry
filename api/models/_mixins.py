@@ -77,9 +77,9 @@ class Serialisable(metaclass=ABCMeta):
 class Hypermedia(metaclass=ABCMeta):
     """ Base class for hypermedia references """
     _base_uri:T.ClassVar[str]
-    _relation:T.ClassVar[str]
-
-    @property
+    _relation:T.ClassVar[str]  # FIXME? This is effectively the class'
+                               # relation to some "root", which doesn't
+    @property                  # really make sense!
     @abstractmethod
     def identity(self) -> str:
         """ Object's identity for its URI """
