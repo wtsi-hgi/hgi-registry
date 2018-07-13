@@ -33,6 +33,7 @@ __all__ = ["start"]
 
 async def _set_server_header(_request:Request, response:Response) -> None:
     response.headers["Server"] = f"Human Genetics Programme Registry API Server {__version__}"
+    response.headers["Access-Control-Allow-Origin"] = "*"
 
 async def _shutdown(app:Application) -> None:
     log("Shutting down API server", Level.Info)
