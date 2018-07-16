@@ -146,3 +146,9 @@ following entities:
 * `status` HTTP status code;
 * `reason` HTTP status reason;
 * `description` Description of the error
+
+# Frontend
+
+Currently, a *very* rudimentary frontend exists, that expects the API
+server to be available at `http://localhost:5000`. It cannot be
+emphasised enough just how basic this frontend is!
