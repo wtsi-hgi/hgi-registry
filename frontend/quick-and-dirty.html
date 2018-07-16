@@ -15,12 +15,12 @@
         var requests = 0;
         $(document)
           .ajaxStart(function() {
-            if (requests == 0) $("body").css("cursor", "progress");
+            if (requests == 0) $("*").css("cursor", "progress");
             requests++;
           })
           .ajaxComplete(function() {
             requests--;
-            if (requests == 0) $("body").css("cursor", "default");
+            if (requests == 0) $("*").css("cursor", "default");
           });
 
         var error_handler = function(endpoint) {
