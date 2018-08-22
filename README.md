@@ -1,10 +1,10 @@
-# Human Genetics Programme Group Registry
+# Human Genetics Programme Group Registry API
 
 [![Build Status](https://travis-ci.org/wtsi-hgi/hgi-registry.svg?branch=master)](https://travis-ci.org/wtsi-hgi/hgi-registry)
 [![Test Coverage](https://codecov.io/gh/wtsi-hgi/hgi-registry/branch/master/graph/badge.svg)](https://codecov.io/gh/wtsi-hgi/hgi-registry)
 
-A simple web interface that provides an overview of project and team
-groups within the Human Genetics Programme.
+A RESTful API server that provides details of the project and teams
+groups, and their members, from within the Human Genetics Programme.
 
 # Installation
 
@@ -146,9 +146,3 @@ following entities:
 * `status` HTTP status code;
 * `reason` HTTP status reason;
 * `description` Description of the error
-
-# Frontend
-
-Currently, a *very* rudimentary frontend exists, that expects the API
-server to be available at `http://localhost:5000`. It cannot be
-emphasised enough just how basic this frontend is!
